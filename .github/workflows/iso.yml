@@ -78,12 +78,14 @@ jobs:
       - name: Хвост лога сборки
         if: always()
         run: |
-          tail -60 build.log || echo "(лог пуст)"
+          # Длинные строки (список пакетов) обрезаем, иначе они съедают всю
+          # аннотацию и настоящей ошибки не видно.
           if [ -s build.log ]; then
-            clean=$(sed -r 's/\x1b\[[0-9;]*m//g' build.log)
-            head=$(echo "$clean" | head -n 12 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)
-            tailmsg=$(echo "$clean" | tail -n 15 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-1800)
-            echo "::error::BUILDLOG_HEAD=${head}"
+            clean=$(sed -r 's/\x1b\[[0-9;]*m//g' build.log | cut -c1-200)
+            tailmsg=$(echo "$clean" | tail -n 30 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-2500)
+            errs=$(echo "$clean" | grep -inE "ошибка|error|failed|Traceback|не найден|not found|aborting|ОШИБКА" \
+                   | grep -v "^[0-9]*:==> " | head -n 12 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-2500)
+            echo "::error::BUILDLOG_ERRORS=${errs}"
             echo "::error::BUILDLOG_TAIL=${tailmsg}"
           else
             echo "::error::BUILDLOG пуст"
