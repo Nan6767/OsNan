@@ -77,7 +77,14 @@ jobs:
       # в репозиторий — так сборку удобно отлаживать.
       - name: Хвост лога сборки
         if: always()
-        run: tail -60 build.log || echo "(лог пуст)"
+        run: |
+          tail -60 build.log || echo "(лог пуст)"
+          if [ -s build.log ]; then
+            msg=$(tail -n 40 build.log | tr '\n\r' '~~' | sed 's/%/%25/g; s/::/../g' | cut -c1-1800)
+            echo "::error::BUILDLOG=${msg}"
+          else
+            echo "::error::BUILDLOG пуст"
+          fi
 
       # Логи Actions недоступны извне (сеть ограничена), поэтому сохраняем их
       # в репозиторий — так сборку удобно отлаживать.

@@ -55,9 +55,20 @@ install_packages() {
 }
 
 log "Обновление ключей и установка инструментов сборки"
+echo "  pacman: $(pacman -V 2>&1 | head -1)"
+echo "  образ:  $(cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME || echo '?')"
 pacman-key --init 2>&1 | tail -2
 pacman-key --populate archlinux 2>&1 | tail -2
-install_packages $BUILD_PACKAGES || die "не удалось установить инструменты сборки"
+
+# Полное обновление: в старом контейнере установка новых пакетов поверх
+# старых библиотек приводит к частичному обновлению и ошибкам.
+install_packages --noconfirm -Syu $BUILD_PACKAGES || {
+    warn "повторяем установку после полного обновления системы"
+    pacman -Syu --noconfirm || fix_keys
+    install_packages $BUILD_PACKAGES || die "не удалось установить инструменты сборки"
+}
+command -v mkarchiso >/dev/null || die "mkarchiso не установлен"
+echo "  archiso: $(pacman -Qi archiso 2>/dev/null | awk '/^Version/{print $3}' || echo '?')"
 
 log "Проверка дерева"
 python scripts/check.py || warn "проверка выдала замечания — продолжаем"
