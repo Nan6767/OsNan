@@ -87,6 +87,34 @@ docker run --rm -it --privileged \
 `--privileged` обязателен: mkarchiso работает с loop-устройствами и chroot.
 Ключи pacman в контейнере обновляются автоматически при сборке образа.
 
+То же самое одной командой без сборки своего образа:
+
+```bash
+docker run --rm -it --privileged -v "$PWD:/flyarchos" -w /flyarchos \
+    archlinux:latest ./scripts/ci-build.sh slim   # или full
+```
+
+## 4b. Сборка в GitHub Actions (облако)
+
+Если нет ни Arch, ни Docker — соберите образ в облаке:
+
+```bash
+gh workflow run iso.yml -f profile=slim -f upload=true
+gh run watch            # следить за логом
+```
+
+или через веб-интерфейс: **Actions → Build ISO → Run workflow**.
+
+* `slim` — оба окружения без дополнительных наборов (~3-4 ГБ, ~30-50 мин);
+* `full` — «жирный» образ со всеми наборами ПО (~10 ГБ, до 5 часов, может
+  упереться в место на стандартном раннере);
+* готовый ISO появится в артефактах запуска (`flyarchos-slim-iso`) и хранится
+  7 дней. Скачать можно со страницы запуска или командой
+  `gh run download <id>`.
+
+Workflow освобождает место на раннере (удаляет android/dotnet/ghc) и запускает
+`scripts/ci-build.sh` в привилегированном контейнере `archlinux:latest`.
+
 ## 5. Обновление состава системы
 
 Все пакеты описаны в `groups/`:

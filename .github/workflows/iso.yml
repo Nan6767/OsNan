@@ -1,12 +1,23 @@
 name: Build ISO
 
-# Сборка «жирного» образа занимает час и требует привилегированного
-# контейнера, поэтому запускается вручную: Actions → Build ISO → Run workflow.
+# Сборка ISO в облаке: привилегированный контейнер archlinux на раннере GitHub.
+# Запуск вручную: Actions → Build ISO → Run workflow.
+#
+# Почему так: mkarchiso нужны root, монтирование и сеть до зеркал Arch —
+# обычная песочница этого не даёт. slim — компактный образ (~3-4 ГБ, оба
+# окружения без дополнительных наборов), full — «жирный» (~10 ГБ).
 on:
   workflow_dispatch:
     inputs:
+      profile:
+        description: "Профиль образа"
+        type: choice
+        options:
+          - slim
+          - full
+        default: slim
       aur:
-        description: "Собрать и AUR-пакеты (groups/aur.txt)"
+        description: "Добавить AUR-пакеты (groups/aur.txt)"
         type: boolean
         default: false
       upload:
@@ -16,43 +27,44 @@ on:
 
 jobs:
   iso:
-    name: mkarchiso
+    name: mkarchiso (${{ inputs.profile }})
     runs-on: ubuntu-latest
-    timeout-minutes: 240
-    container:
-      image: archlinux:latest
-      options: --privileged
+    timeout-minutes: 330
     steps:
-      - name: Зависимости сборки
-        run: |
-          pacman -Sy --noconfirm --needed archlinux-keyring
-          pacman -Syu --noconfirm --needed archiso git python python-yaml squashfs-tools \
-              rsync cdrtools dosfstools mtools grub efibootmgr
-
       - uses: actions/checkout@v4
 
-      - name: Проверка дерева
-        run: python scripts/check.py
+      - name: Место на диске до очистки
+        run: df -h /
 
-      - name: Сборка AUR-пакетов
-        if: ${{ inputs.aur }}
-        run: ./scripts/build-aur.sh || echo "AUR собран частично — продолжаем без него"
-
-      - name: Сборка ISO
+      - name: Очистка диска раннера (android/dotnet/ghc съедают ~15 ГБ)
         run: |
-          mkdir -p out
-          ./scripts/build-iso.sh --clean
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/share/swift /usr/local/share/boost /usr/share/gradle
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+          sudo docker image prune -a -f || true
+          df -h /
+
+      - name: Сборка ISO в контейнере archlinux
+        run: |
+          docker run --rm --privileged \
+            -v "$GITHUB_WORKSPACE:/flyarchos" -w /flyarchos \
+            archlinux:latest \
+            ./scripts/ci-build.sh "${{ inputs.profile }}" ${{ inputs.aur && '--aur' || '' }}
 
       - name: Информация об образе
         run: |
           ls -lh out/
           cat out/*.sha256 || true
+          df -h / | tail -1
 
       - name: Артефакты
         if: ${{ inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
-          name: flyarchos-iso
-          path: out/*.iso
+          name: flyarchos-${{ inputs.profile }}-iso
+          path: |
+            out/*.iso
+            out/*.sha256
           retention-days: 7
           if-no-files-found: error
+          compression-level: 0

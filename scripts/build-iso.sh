@@ -2,7 +2,8 @@
 # ---------------------------------------------------------------------------
 # FlyArchOs — сборка ISO.
 #
-#   ./scripts/build-iso.sh            обычная сборка
+#   ./scripts/build-iso.sh                 обычная сборка (полный профиль)
+#   ./scripts/build-iso.sh --profile slim   компактный образ: оба окружения без доп. наборов
 #   ./scripts/build-iso.sh --aur      сначала собрать AUR-пакеты в локальный репозиторий
 #   ./scripts/build-iso.sh --clean    очистить рабочие каталоги перед сборкой
 #   ./scripts/build-iso.sh --check    только проверить окружение
@@ -23,6 +24,8 @@ AUR=0
 CLEAN=0
 ONLY_CHECK=0
 VERBOSE="-v"
+PROFILE_NAME="full"
+SLIM_GROUPS="core,common,hyprland,plasma,apps,live"
 
 log()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m==> ПРЕДУПРЕЖДЕНИЕ:\033[0m %s\n' "$*" >&2; }
@@ -35,6 +38,8 @@ usage() {
 while [ $# -gt 0 ]; do
     case "$1" in
         --aur)        AUR=1 ;;
+        --profile)    shift; PROFILE_NAME="${1:-full}" ;;
+        --profile=*)  PROFILE_NAME="${1#*=}" ;;
         --clean)      CLEAN=1 ;;
         --check)      ONLY_CHECK=1 ;;
         -q|--quiet)   VERBOSE="" ;;
@@ -140,6 +145,19 @@ text = re.sub(r"bootmodes=\([^)]*\)", f"bootmodes=({modes})", text, count=1, fla
 open(path, "w", encoding="utf-8").write(text)
 PY
     fi
+fi
+
+# --- 7b. slim: скрываем в установщике наборы, которых нет в образе --------
+if [ "$PROFILE_NAME" = "slim" ]; then
+    log "Профиль slim: убираем страницу «Наборы ПО» из установщика"
+    python3 - "$WORK/profile/etc/calamares/settings.conf" <<'PY'
+import re, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+text = re.sub(r"^[ \t]*- packagechooser@extras\n", "", text, flags=re.M)
+open(path, "w", encoding="utf-8").write(text)
+PY
+    echo "slim" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"
 fi
 
 # --- 8. проверка дерева ----------------------------------------------------

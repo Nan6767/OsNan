@@ -237,12 +237,26 @@ def check_packagechooser_groups(report: Report) -> None:
     report.add("packagechooser ↔ группы пакетов", not problems, "; ".join(problems))
 
 
+def detected_profile_groups() -> list[str]:
+    """Какие группы были использованы при генерации packages.x86_64."""
+    path = PROFILE / "packages.x86_64"
+    if not path.is_file():
+        return []
+    match = re.search(r"^# Профиль: slim \(группы: ([^)]+)\)",
+                      path.read_text(encoding="utf-8"), re.M)
+    if not match:
+        return []
+    return [name.strip() for name in match.group(1).split(",") if name.strip()]
+
+
 def check_packages_list(report: Report) -> None:
-    proc = subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "gen-packages.py"), "--check"],
-        capture_output=True, text=True,
-    )
-    report.add("packages.x86_64 актуален (groups/)", proc.returncode == 0,
+    cmd = [sys.executable, str(REPO / "scripts" / "gen-packages.py"), "--check"]
+    groups = detected_profile_groups()
+    if groups:
+        cmd += ["--only-groups", ",".join(groups)]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    suffix = f" [профиль: {', '.join(groups)}]" if groups else ""
+    report.add("packages.x86_64 актуален (groups/)" + suffix, proc.returncode == 0,
                proc.stderr.strip().replace("\n", " "))
 
 

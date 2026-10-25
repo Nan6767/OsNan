@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -80,8 +81,12 @@ def load_groups(groups_dir: Path) -> list[tuple[str, Path, list[str]]]:
     return result
 
 
-def render(groups: list[tuple[str, Path, list[str]]], title: str) -> str:
+def render(groups: list[tuple[str, Path, list[str]]], title: str, only: Sequence[str] = ()) -> str:
     lines = [HEADER, f"# Файл: {title}", "#"]
+    if only:
+        lines.append(f"# Профиль: slim (группы: {', '.join(only)})")
+    else:
+        lines.append("# Профиль: full (все группы)")
     total = 0
     for name, path, packages in groups:
         total += len(packages)
@@ -97,15 +102,27 @@ def main() -> int:
     parser.add_argument("--groups-dir", type=Path, default=DEFAULT_GROUPS)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--aur-out", type=Path, default=DEFAULT_AUR_OUT)
+    parser.add_argument("--only-groups", default="",
+                       help="ограничить состав (например core,common,hyprland,plasma,apps,live)")
     parser.add_argument("--check", action="store_true", help="проверить, что файлы актуальны")
     parser.add_argument("--stats", action="store_true", help="вывести статистику по группам")
     args = parser.parse_args()
+
+    only = [name.strip() for name in args.only_groups.split(",") if name.strip()]
 
     try:
         groups = load_groups(args.groups_dir)
     except PackageError as exc:
         print(f"ОШИБКА: {exc}", file=sys.stderr)
         return 1
+
+    if only:
+        known = {name for name, _path, _packages in groups}
+        unknown = [name for name in only if name not in known]
+        if unknown:
+            print(f"ОШИБКА: неизвестные группы: {', '.join(unknown)}", file=sys.stderr)
+            return 1
+        groups = [item for item in groups if item[0] in only]
 
     if args.stats:
         width = max(len(name) for name, _, _ in groups)
@@ -116,10 +133,10 @@ def main() -> int:
         print(f"{'ИТОГО':<{width}}  {total:>4}")
         return 0
 
-    content = render(groups, args.out.name)
+    content = render(groups, args.out.name, only)
     aur_file = args.groups_dir / "aur.txt"
     aur_content = ""
-    if aur_file.is_file():
+    if aur_file.is_file() and not only:  # в slim-профиле AUR не собираем
         aur_pkgs = parse_group(aur_file)
         aur_content = "\n".join(aur_pkgs) + "\n" if aur_pkgs else ""
 
