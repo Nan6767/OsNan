@@ -15,8 +15,7 @@ buildmodes=('iso')
 # Режимы загрузки берутся от releng-профиля archiso:
 # BIOS через syslinux, UEFI через systemd-boot. Если ваша версия archiso
 # использует GRUB — scripts/build-iso.sh подставит поддерживаемый список сам.
-bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' \
-           'uefi-x64.systemd-boot.esp' 'uefi-x64.systemd-boot.eltorito')
+bootmodes=('bios.syslinux' 'uefi.systemd-boot')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"

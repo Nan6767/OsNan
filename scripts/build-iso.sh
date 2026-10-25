@@ -153,6 +153,14 @@ done
 # так профиль не сломается на другой версии archiso.
 if [ "$RELBUILT" = "1" ] && [ -f "$RELENG/profiledef.sh" ]; then
     RELENG_BOOTMODES=$(bash -c "unset bootmodes; . '$RELENG/profiledef.sh' >/dev/null 2>&1 || true; printf \"'%s' \" \"\${bootmodes[@]}\"" || true)
+    # Устаревшие имена (.mbr/.eltorito/.esp) из releng не берём — они только
+    # заваливают вывод предупреждениями и требуют лишние пакеты.
+    case "$RELENG_BOOTMODES" in
+        *.mbr*|*.eltorito*|*.esp*)
+            log "  в releng устаревшие bootmodes — оставляю свои"
+            RELENG_BOOTMODES=""
+            ;;
+    esac
     if [ -n "${RELENG_BOOTMODES// /}" ]; then
         log "  bootmodes из releng: ${RELENG_BOOTMODES}"
         python3 - "$WORK/profile/profiledef.sh" "$RELENG_BOOTMODES" <<'PY'

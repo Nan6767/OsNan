@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 297
+# Всего пакетов: 301
 # Профиль: full (все группы)
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -321,7 +321,11 @@ pdfarranger
 zathura
 zathura-pdf-mupdf
 
-# --- live (99-live.txt): 3 шт. --------------------
+# --- live (99-live.txt): 7 шт. --------------------
 archinstall
 clonezilla
 testdisk
+syslinux
+edk2-shell
+memtest86+
+memtest86+-efi
