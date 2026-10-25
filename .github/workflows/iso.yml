@@ -7,6 +7,11 @@ name: Build ISO
 # обычная песочница этого не даёт. slim — компактный образ (~3-4 ГБ, оба
 # окружения без дополнительных наборов), full — «жирный» (~10 ГБ).
 on:
+  # Пуш-триггер — чтобы запускать сборку без прав на workflow_dispatch:
+  # достаточно изменить файл BUILD_ISO.txt (в нём же задаётся профиль).
+  push:
+    paths:
+      - "BUILD_ISO.txt"
   workflow_dispatch:
     inputs:
       profile:
@@ -27,11 +32,18 @@ on:
 
 jobs:
   iso:
-    name: mkarchiso (${{ inputs.profile }})
+    name: mkarchiso
     runs-on: ubuntu-latest
     timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
+
+      - name: Профиль сборки
+        id: cfg
+        run: |
+          profile=$(grep -oE 'profile=(slim|full)' BUILD_ISO.txt | head -1 | cut -d= -f2)
+          echo "profile=${profile:-slim}" >> "$GITHUB_OUTPUT"
+          echo "Профиль: ${profile:-slim}"
 
       - name: Место на диске до очистки
         run: df -h /
@@ -49,7 +61,9 @@ jobs:
           docker run --rm --privileged \
             -v "$GITHUB_WORKSPACE:/flyarchos" -w /flyarchos \
             archlinux:latest \
-            ./scripts/ci-build.sh "${{ inputs.profile }}" ${{ inputs.aur && '--aur' || '' }}
+            ./scripts/ci-build.sh \
+              "${{ github.event_name == 'workflow_dispatch' && inputs.profile || steps.cfg.outputs.profile }}" \
+              ${{ inputs.aur && '--aur' || '' }}
 
       - name: Информация об образе
         run: |
@@ -58,10 +72,10 @@ jobs:
           df -h / | tail -1
 
       - name: Артефакты
-        if: ${{ inputs.upload }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
-          name: flyarchos-${{ inputs.profile }}-iso
+          name: flyarchos-${{ steps.cfg.outputs.profile }}-iso-${{ github.run_number }}
           path: |
             out/*.iso
             out/*.sha256
