@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Nord Fjord»",
+        "Id": "FlyArchOs-NordFjord",
+        "License": "CC0-1.0",
+        "Name": "Nord Fjord"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

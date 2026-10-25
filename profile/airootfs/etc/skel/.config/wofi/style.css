@@ -1,0 +1,38 @@
+/* FlyArchOs — тема Wofi */
+window {
+    background-color: rgba(16, 18, 28, 0.92);
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    border-radius: 14px;
+    font-family: "JetBrainsMono Nerd Font", "Noto Sans", sans-serif;
+    font-size: 13px;
+}
+
+#input {
+    background-color: rgba(39, 42, 61, 0.8);
+    color: #e7e9f0;
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 12px;
+}
+
+#inner-box {
+    margin: 0 12px 12px 12px;
+}
+
+#entry {
+    padding: 6px 10px;
+    border-radius: 8px;
+    color: #c8cbe0;
+}
+
+#entry:selected {
+    background: linear-gradient(90deg, #22d3ee, #f0559b);
+    color: #10121c;
+    font-weight: 700;
+    outline: none;
+}
+
+#text {
+    padding-left: 8px;
+}

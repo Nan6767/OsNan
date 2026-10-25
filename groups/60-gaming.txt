@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — набор «Гейминг» (выбирается в установщике)
+# ---------------------------------------------------------------------------
+
+steam
+lutris
+wine
+wine-gecko
+wine-mono
+winetricks
+gamemode
+lib32-gamemode
+mangohud
+lib32-mangohud
+
+# Графика
+mesa
+lib32-mesa
+mesa-utils
+vulkan-tools
+vulkan-radeon
+lib32-vulkan-radeon
+vulkan-intel
+lib32-vulkan-intel
+xf86-video-amdgpu
+xf86-video-ati
+
+# NVIDIA (закрытый драйвер, при отсутствии железа просто не используется)
+nvidia
+nvidia-utils
+nvidia-settings
+lib32-nvidia-utils

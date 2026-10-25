@@ -1,0 +1,20 @@
+font=JetBrainsMono Nerd Font 11
+background-color=#1b1d2bf2
+text-color=#e7e9f0
+border-color=#22d3ee
+border-size=2
+border-radius=12
+padding=12
+margin=10
+default-timeout=6000
+max-visible=5
+anchor=bottom-right
+width=360
+layer=overlay
+
+[urgency=high]
+border-color=#f0559b
+default-timeout=0
+
+[app-name="Скриншот"]
+border-color=#22d3ee

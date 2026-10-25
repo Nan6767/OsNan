@@ -1,0 +1,34 @@
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+widgetStyle=Breeze
+SingleClick=false
+ShowDeleteCommand=false
+
+[General]
+ColorScheme=BreezeDark
+Name=Breeze Dark
+XftAntialias=true
+XftHintStyle=hintslight
+XftSubPixel=rgb
+font=Noto Sans,11,-1,5,50,0,0,0,0,0
+fixed=JetBrainsMono Nerd Font,11,-1,5,50,0,0,0,0,0
+menuFont=Noto Sans,11,-1,5,50,0,0,0,0,0
+smallestReadableFont=Noto Sans,8,-1,5,50,0,0,0,0,0
+toolBarFont=Noto Sans,11,-1,5,50,0,0,0,0,0
+
+[Icons]
+Theme=breeze-dark
+
+[Theme]
+name=breeze-dark
+
+[KFileDialog Settings]
+Places Icons Highlighted Color=#22d3ee
+
+[WM]
+activeBackground=34,211,238
+activeBlend=245,247,255
+activeForeground=16,18,28
+inactiveBackground=39,42,61
+inactiveBlend=200,203,224
+inactiveForeground=138,144,166

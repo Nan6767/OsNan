@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Ink Bloom»",
+        "Id": "FlyArchOs-InkBloom",
+        "License": "CC0-1.0",
+        "Name": "Ink Bloom"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

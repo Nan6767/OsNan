@@ -1,0 +1,60 @@
+/* FlyArchOs — тема Waybar */
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "JetBrainsMono Nerd Font", "Noto Sans", sans-serif;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(16, 18, 28, 0.82);
+    color: #e7e9f0;
+    transition-property: background-color;
+    transition-duration: 0.5s;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.25);
+}
+
+#workspaces button {
+    padding: 0 8px;
+    color: #8a90a6;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #10121c;
+    background: #22d3ee;
+    border-radius: 10px;
+    margin: 5px 3px;
+}
+
+#workspaces button:hover {
+    color: #22d3ee;
+    background: rgba(34, 211, 238, 0.14);
+    border-radius: 10px;
+    margin: 5px 3px;
+}
+
+#window {
+    padding-left: 12px;
+    color: #c8cbe0;
+}
+
+#clock, #clock2, #network, #pulseaudio, #bluetooth, #battery, #tray {
+    padding: 0 10px;
+    margin: 3px 2px;
+    border-radius: 10px;
+    background: rgba(39, 42, 61, 0.55);
+}
+
+#clock { color: #22d3ee; font-weight: 700; }
+#pulseaudio:hover, #network:hover, #battery:hover { color: #f0559b; }
+
+#battery.critical { color: #f0556d; background: rgba(240, 85, 109, 0.18); }
+#battery.warning  { color: #ffcc66; }
+
+tooltip {
+    background: #10121c;
+    border: 1px solid #22d3ee;
+    border-radius: 10px;
+}

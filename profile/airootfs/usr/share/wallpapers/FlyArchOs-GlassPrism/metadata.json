@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Glass Prism»",
+        "Id": "FlyArchOs-GlassPrism",
+        "License": "CC0-1.0",
+        "Name": "Glass Prism"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

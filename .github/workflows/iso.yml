@@ -1,0 +1,58 @@
+name: Build ISO
+
+# Сборка «жирного» образа занимает час и требует привилегированного
+# контейнера, поэтому запускается вручную: Actions → Build ISO → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      aur:
+        description: "Собрать и AUR-пакеты (groups/aur.txt)"
+        type: boolean
+        default: false
+      upload:
+        description: "Приложить ISO к артефактам запуска"
+        type: boolean
+        default: true
+
+jobs:
+  iso:
+    name: mkarchiso
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - name: Зависимости сборки
+        run: |
+          pacman -Sy --noconfirm --needed archlinux-keyring
+          pacman -Syu --noconfirm --needed archiso git python python-yaml squashfs-tools \
+              rsync cdrtools dosfstools mtools grub efibootmgr
+
+      - uses: actions/checkout@v4
+
+      - name: Проверка дерева
+        run: python scripts/check.py
+
+      - name: Сборка AUR-пакетов
+        if: ${{ inputs.aur }}
+        run: ./scripts/build-aur.sh || echo "AUR собран частично — продолжаем без него"
+
+      - name: Сборка ISO
+        run: |
+          mkdir -p out
+          ./scripts/build-iso.sh --clean
+
+      - name: Информация об образе
+        run: |
+          ls -lh out/
+          cat out/*.sha256 || true
+
+      - name: Артефакты
+        if: ${{ inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: flyarchos-iso
+          path: out/*.iso
+          retention-days: 7
+          if-no-files-found: error

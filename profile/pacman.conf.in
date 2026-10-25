@@ -1,0 +1,29 @@
+#
+# /etc/pacman.conf — конфигурация pacman для СБОРКИ образа FlyArchOs
+# (шаблон: scripts/build-iso.sh подставляет пути и создаёт profile/pacman.conf).
+#
+# Отличается от системного /etc/pacman.conf только включённым multilib
+# и, опционально, локальным репозиторием @FLYARCHOS_REPO@ с пакетами AUR.
+#
+
+[options]
+HoldPkg      = pacman glibc
+Architecture = auto
+CheckSpace
+SigLevel     = Required DatabaseOptional
+LocalFileSigLevel = Optional
+ParallelDownloads = 8
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+
+# 32-битные библиотеки (Steam, Wine, драйверы)
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+
+# Локальный репозиторий с собранными AUR-пакетами (make aur).
+# Если репозиторий не собран, строка закомментирована.
+@FLYARCHOS_REPO@

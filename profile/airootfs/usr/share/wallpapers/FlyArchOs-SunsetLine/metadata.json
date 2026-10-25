@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Sunset Line»",
+        "Id": "FlyArchOs-SunsetLine",
+        "License": "CC0-1.0",
+        "Name": "Sunset Line"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

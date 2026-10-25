@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — пакеты, которых НЕТ в официальных репозиториях (AUR).
+#
+# Они попадают в ISO ТОЛЬКО если перед сборкой был создан локальный
+# репозиторий:  make aur   (scripts/build-aur.sh).
+# Если репозитория нет — список игнорируется, mkarchiso соберёт ISO без них.
+#
+# Совет: держите здесь немного пакетов — каждый тянет за собой зависимости
+# и заметно увеличивает образ.
+# ---------------------------------------------------------------------------
+
+paru
+yay
+google-chrome
+spotify
+proton-ge-custom-bin
+heroic-games-launcher-bin
+vesktop-bin
+obsidian
+ventoy-bin
+ttf-ms-fonts
+wlogout
+nwg-look
+swaync
+hyprshot
+grimblast
+pyprland
+kvantum-qt5
+catppuccin-gtk-theme-mocha
+bibata-cursor-theme
+goverlay
+vkbasalt
+realtime-privileges
+downgrade
+pacseek

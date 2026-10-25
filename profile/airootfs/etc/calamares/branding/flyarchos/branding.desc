@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — брендинг установщика Calamares
+# ---------------------------------------------------------------------------
+---
+componentName: flyarchos
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+showAccountOnline: false
+showSupportUrl: false
+showKnownIssuesUrl: false
+showReleaseNotesUrl: false
+showDonateUrl: false
+
+strings:
+    productName:         "FlyArchOs Linux"
+    version:             "1.0.0"
+    shortVersion:        "1.0"
+    versionedName:       "FlyArchOs Linux 1.0.0"
+    shortVersionedName:  "FlyArchOs 1.0.0"
+    shortProductName:    "FlyArchOs"
+    bootloaderEntryName: "FlyArchOs"
+    productUrl:          "https://github.com/Nan6767/OsNan"
+    supportUrl:          "https://github.com/Nan6767/OsNan/issues"
+    knownIssuesUrl:      ""
+    releaseNotesUrl:     "https://github.com/Nan6767/OsNan"
+    donateUrl:           ""
+
+images:
+    productLogo:      "logo.png"
+    productIcon:      "logo-small.png"
+    productWelcome:   "welcome.png"
+    productWallpaper: "wallpaper.jpg"
+
+slideshow:      "show.qml"
+slideshowAPI:   1
+
+style:
+    sidebarBackground:     "#10121c"
+    sidebarText:           "#e7e9f0"
+    sidebarTextSelect:     "#22d3ee"
+    sidebarTextHighlight:  "#f0559b"

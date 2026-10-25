@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — набор «Разработка» (выбирается в установщике)
+# ---------------------------------------------------------------------------
+
+git-lfs
+github-cli
+gcc
+clang
+lld
+lldb
+gdb
+cmake
+meson
+ninja
+pkgconf
+python-virtualenv
+python-pytest
+yarn
+go
+rustup
+jdk-openjdk
+lazygit
+meld
+dbeaver
+code
+
+# Контейнеры и виртуализация
+docker
+docker-compose
+podman
+qemu-full
+libvirt
+virt-manager
+virt-viewer
+edk2-ovmf
+dnsmasq
+virtualbox
+virtualbox-host-modules-arch

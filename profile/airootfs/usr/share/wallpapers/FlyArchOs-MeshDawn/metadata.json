@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Mesh Dawn»",
+        "Id": "FlyArchOs-MeshDawn",
+        "License": "CC0-1.0",
+        "Name": "Mesh Dawn"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}
