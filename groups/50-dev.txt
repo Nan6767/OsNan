@@ -35,4 +35,7 @@ virt-viewer
 edk2-ovmf
 dnsmasq
 virtualbox
-virtualbox-host-modules-arch
+# Модули ядра для VirtualBox: берём DKMS-вариант — в образе два ядра
+# (linux и linux-lts), а virtualbox-host-modules-arch собирается только
+# под стандартное ядро (и исчез из репозиториев).
+virtualbox-host-dkms

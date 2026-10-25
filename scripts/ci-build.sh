@@ -87,10 +87,21 @@ if [ "$WITH_AUR" = "--aur" ]; then
     ./scripts/build-aur.sh || warn "AUR собран частично — продолжаем без него"
 fi
 
-pacman -Sy --noconfirm >/dev/null || warn "не удалось обновить базы пакманов"
-if ! pacman -Sl multilib >/dev/null 2>&1; then
-    warn "база multilib недоступна — пакеты lib32-*, steam не найдутся"
-fi
+# Проверяем имена пакетов по конфигурации самого профиля (в ней включён
+# multilib) — иначе steam и lib32-* «не находятся» только из-за /etc/pacman.conf
+# контейнера, а на самом деле в образ ставятся нормально.
+python3 - profile/pacman.conf.in /tmp/check-pacman.conf <<'PY'
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+text = open(src, encoding="utf-8").read().replace("@FLYARCHOS_REPO@", "")
+open(dst, "w", encoding="utf-8").write(text)
+PY
+pacman -Sy --config /tmp/check-pacman.conf --noconfirm >/dev/null \
+    || warn "не удалось обновить базы пакманов"
+for repo in core extra multilib; do
+    pacman -Sl --config /tmp/check-pacman.conf "$repo" >/dev/null 2>&1 \
+        || warn "база $repo недоступна — часть пакетов не найдётся"
+done
 
 GEN_ARGS=()
 if [ "$PROFILE_NAME" = "slim" ]; then
@@ -102,12 +113,12 @@ fi
 log "Предпроверка имён пакетов (profile/packages.x86_64)"
 python3 scripts/gen-packages.py "${GEN_ARGS[@]}" >/dev/null
 mapfile -t PKGS < <(grep -vE '^\s*(#|$)' profile/packages.x86_64)
-if ! pacman -S --print-format '%n' --noconfirm "${PKGS[@]}" >/tmp/pkgcheck.out 2>/tmp/pkgcheck.err; then
+if ! pacman -S --config /tmp/check-pacman.conf --print-format '%n' --noconfirm "${PKGS[@]}" >/tmp/pkgcheck.out 2>/tmp/pkgcheck.err; then
     mapfile -t MISSING < <(grep -oE "target not found: [^ ]+" /tmp/pkgcheck.err | awk '{print $NF}' | sort -u)
     warn "не найдено в репозиториях: ${MISSING[*]}"
     for name in "${MISSING[@]}"; do
         echo -n "  $name → похожие: "
-        pacman -Ssq "$name" 2>/dev/null | head -6 | tr '\n' ' '
+        pacman -Ssq --config /tmp/check-pacman.conf "$name" 2>/dev/null | head -20 | tr '\n' ' '
         echo
     done
     # Не падаем: собираем ISO без этих пакетов, а в groups/*.txt поправим потом.

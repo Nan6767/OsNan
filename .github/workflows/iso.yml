@@ -129,6 +129,26 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+      # Рабочий каталог mkarchiso (work/) занимает десятки ГБ и после сборки
+      # не нужен — освобождаем место под нарезку ISO для релиза.
+      - name: Очистка рабочего каталога
+        if: always()
+        run: |
+          sudo rm -rf work || true
+          df -h / | tail -1
+
+      - name: Итоги сборки
+        if: always()
+        run: |
+          iso=$(ls -1 out/*.iso 2>/dev/null | head -1 || true)
+          if [ -n "$iso" ]; then
+            size=$(stat -c %s "$iso")
+            sum=$(cut -d' ' -f1 < "$iso.sha256")
+            echo "::error::ISO_GOT=$(basename "$iso") size=$((size/1048576))MB sha256=$sum"
+          else
+            echo "::error::ISO_GOT=нет ISO в out/"
+          fi
+
       - name: Публикация ISO в релиз GitHub
         if: ${{ success() }}
         continue-on-error: true
@@ -136,15 +156,40 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          set -e
-          tag="iso-${{ github.run_number }}"
           iso=$(ls -1 out/*.iso | head -1)
-          gh release create "$tag" \
-            --title "FlyArchOs ISO — ${{ steps.cfg.outputs.profile }} (run ${{ github.run_number }}, $(date -u +%F))" \
-            --notes "Автоматическая сборка FlyArchOs (Arch Linux + Hyprland + KDE Plasma, установщик Calamares).
+          base=$(basename "$iso")
+          tag="iso-${{ github.run_number }}-${{ steps.cfg.outputs.profile }}"
+          size=$(stat -c %s "$iso")
+          sum=$(cut -d' ' -f1 < "$iso.sha256")
+          limit=$((1900 * 1024 * 1024))
+          parts=()
+          if [ "$size" -gt "$limit" ]; then
+            echo "ISO $((size/1048576)) МБ — режем на части по 1900 МБ (лимит GitHub: 2 ГБ на файл релиза)"
+            split -b 1900M -d -a 2 "$iso" "out/$base.part"
+            parts=(out/"$base".part*)
+            { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл)."
+              echo
+              echo "Собрать образ (Linux/macOS):"
+              echo "  cat $base.part* > $base"
+              echo "  sha256sum -c $base.sha256"
+              echo
+              echo "Windows (PowerShell):"
+              echo "  cmd /c copy /b $base.part* $base"; } > out/JOIN-README.txt
+            parts+=(out/JOIN-README.txt)
+          else
+            parts=("$iso")
+          fi
+          parts+=("$iso.sha256")
+          if gh release create "$tag" \
+              --title "FlyArchOs ISO — ${{ steps.cfg.outputs.profile }} (run ${{ github.run_number }}, $(date -u +%F))" \
+              --notes "Автоматическая сборка FlyArchOs: Arch Linux + Hyprland + KDE Plasma, установщик Calamares, несколько обоев.
 
-          Профиль: ${{ steps.cfg.outputs.profile }}
+          Профиль: **${{ steps.cfg.outputs.profile }}** ($((size/1048576)) МБ)
           Запуск: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          Контрольная сумма — в файле .sha256 рядом с образом." \
-            "$iso" "$iso.sha256"
-          echo "Релиз $tag опубликован"
+          Контрольная сумма: \`$sum\`" \
+              "${parts[@]}" 2>&1 | tee release.log; then
+            echo "Релиз $tag опубликован"
+          else
+            echo "::error::RELEASE_FAILED=$(tail -3 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-600)"
+          fi
+          sudo rm -f out/"$base".part* || true

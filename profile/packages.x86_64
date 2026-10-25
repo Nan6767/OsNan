@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 301
+# Всего пакетов: 302
 # Профиль: full (все группы)
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -270,9 +270,9 @@ virt-viewer
 edk2-ovmf
 dnsmasq
 virtualbox
-virtualbox-host-modules-arch
+virtualbox-host-dkms
 
-# --- gaming (60-gaming.txt): 24 шт. --------------------
+# --- gaming (60-gaming.txt): 25 шт. --------------------
 steam
 lutris
 wine
@@ -293,7 +293,8 @@ vulkan-intel
 lib32-vulkan-intel
 xf86-video-amdgpu
 xf86-video-ati
-nvidia
+nvidia-open
+nvidia-lts-open
 nvidia-utils
 nvidia-settings
 lib32-nvidia-utils
