@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Aurora Flow»",
+        "Id": "FlyArchOs-AuroraFlow",
+        "License": "CC0-1.0",
+        "Name": "Aurora Flow"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

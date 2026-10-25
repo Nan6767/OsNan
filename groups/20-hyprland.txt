@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — Hyprland (Wayland-композитный тайлинговый WM)
+# ---------------------------------------------------------------------------
+
+hyprland
+hyprpaper
+hyprlock
+hypridle
+xdg-desktop-portal-hyprland
+
+# Панель, лаунчер, уведомления
+waybar
+wofi
+mako
+
+# Приложения по умолчанию для Hyprland-сессии
+kitty
+foot
+thunar
+thunar-archive-plugin
+thunar-volman
+xarchiver

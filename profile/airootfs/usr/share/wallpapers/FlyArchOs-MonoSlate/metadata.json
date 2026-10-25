@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Mono Slate»",
+        "Id": "FlyArchOs-MonoSlate",
+        "License": "CC0-1.0",
+        "Name": "Mono Slate"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Nebula»",
+        "Id": "FlyArchOs-Nebula",
+        "License": "CC0-1.0",
+        "Name": "Nebula"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

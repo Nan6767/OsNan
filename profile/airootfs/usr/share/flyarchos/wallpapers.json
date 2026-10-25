@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "wallpaper_dir": "/usr/share/backgrounds/flyarchos",
+  "default": "01-aurora-nexus",
+  "wallpapers": [
+    {
+      "id": "01-aurora-nexus",
+      "title": "Aurora Nexus",
+      "title_ru": "Северное сияние",
+      "kind": "ai",
+      "file": "/usr/share/backgrounds/flyarchos/01-aurora-nexus.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/01-aurora-nexus.jpg",
+      "size": "1920x1080"
+    },
+    {
+      "id": "02-neon-grid",
+      "title": "Neon Grid",
+      "title_ru": "Неоновая сетка",
+      "kind": "ai",
+      "file": "/usr/share/backgrounds/flyarchos/02-neon-grid.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/02-neon-grid.jpg",
+      "size": "1920x1080"
+    },
+    {
+      "id": "03-mountain-dawn",
+      "title": "Mountain Dawn",
+      "title_ru": "Рассвет в горах",
+      "kind": "ai",
+      "file": "/usr/share/backgrounds/flyarchos/03-mountain-dawn.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/03-mountain-dawn.jpg",
+      "size": "1920x1080"
+    },
+    {
+      "id": "04-ink-bloom",
+      "title": "Ink Bloom",
+      "title_ru": "Чернила и золото",
+      "kind": "ai",
+      "file": "/usr/share/backgrounds/flyarchos/04-ink-bloom.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/04-ink-bloom.jpg",
+      "size": "1920x1080"
+    },
+    {
+      "id": "05-nord-fjord",
+      "title": "Nord Fjord",
+      "title_ru": "Северный фьорд",
+      "kind": "ai",
+      "file": "/usr/share/backgrounds/flyarchos/05-nord-fjord.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/05-nord-fjord.jpg",
+      "size": "1920x1080"
+    },
+    {
+      "id": "06-glass-prism",
+      "title": "Glass Prism",
+      "title_ru": "Стеклянная призма",
+      "kind": "ai",
+      "file": "/usr/share/backgrounds/flyarchos/06-glass-prism.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/06-glass-prism.jpg",
+      "size": "1920x1080"
+    },
+    {
+      "id": "07-aurora-flow",
+      "title": "Aurora Flow",
+      "title_ru": "Поток сияния",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/07-aurora-flow.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/07-aurora-flow.jpg",
+      "size": "2560x1440"
+    },
+    {
+      "id": "08-nebula",
+      "title": "Nebula",
+      "title_ru": "Туманность",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/08-nebula.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/08-nebula.jpg",
+      "size": "2560x1440"
+    },
+    {
+      "id": "09-mesh-dawn",
+      "title": "Mesh Dawn",
+      "title_ru": "Мягкий градиент",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/09-mesh-dawn.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/09-mesh-dawn.jpg",
+      "size": "2560x1440"
+    },
+    {
+      "id": "10-deep-wave",
+      "title": "Deep Wave",
+      "title_ru": "Глубокие волны",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/10-deep-wave.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/10-deep-wave.jpg",
+      "size": "2560x1440"
+    },
+    {
+      "id": "11-sunset-line",
+      "title": "Sunset Line",
+      "title_ru": "Линия заката",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/11-sunset-line.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/11-sunset-line.jpg",
+      "size": "2560x1440"
+    },
+    {
+      "id": "12-mono-slate",
+      "title": "Mono Slate",
+      "title_ru": "Монохром",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/12-mono-slate.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/12-mono-slate.jpg",
+      "size": "2560x1440"
+    }
+  ]
+}

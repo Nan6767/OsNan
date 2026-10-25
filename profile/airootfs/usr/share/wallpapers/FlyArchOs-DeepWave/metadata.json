@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Deep Wave»",
+        "Id": "FlyArchOs-DeepWave",
+        "License": "CC0-1.0",
+        "Name": "Deep Wave"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

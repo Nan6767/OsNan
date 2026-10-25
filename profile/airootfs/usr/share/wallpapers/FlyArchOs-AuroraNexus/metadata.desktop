@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Aurora Nexus
+Comment=Обои FlyArchOs
+Type=Service
+ServiceTypes=Plasma/Wallpaper
+X-KDE-PluginInfo-Author=FlyArchOs
+X-KDE-PluginInfo-Name=FlyArchOs-AuroraNexus
+X-KDE-PluginInfo-License=CC0-1.0
+X-KDE-PluginInfo-Category=Wallpapers

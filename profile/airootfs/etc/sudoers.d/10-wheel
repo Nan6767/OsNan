@@ -1,0 +1,3 @@
+# Установленная система: участники группы wheel получают root через пароль.
+# (в live-образе дополнительно лежит 10-flyarchos-live с NOPASSWD)
+%wheel ALL=(ALL:ALL) ALL

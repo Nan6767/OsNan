@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install FlyArchOs
+Name[ru]=Установить FlyArchOs
+GenericName=System installer
+GenericName[ru]=Установщик системы
+Comment=Install FlyArchOs to your disk
+Comment[ru]=Установка FlyArchOs на диск
+Exec=/usr/bin/flyarchos-install
+Icon=calamares
+Terminal=false
+StartupNotify=true
+Categories=System;Qt;
+Keywords=install;system;calamares;

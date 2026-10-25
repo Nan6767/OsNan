@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — общее для всех рабочих окружений (шрифты, темы, Wayland-тулзы)
+# ---------------------------------------------------------------------------
+
+# Wayland/Xwayland фундамент
+xorg-xwayland
+xorg-xrandr
+qt5-wayland
+qt6-wayland
+qt5ct
+qt6ct
+
+# Тема и иконки (общие для GTK и Qt)
+breeze
+breeze-gtk
+breeze-icons
+xcursor-breeze
+hicolor-icon-theme
+adwaita-icon-theme
+papirus-icon-theme
+arc-gtk-theme
+
+# Шрифты
+fontconfig
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+noto-fonts-extra
+ttf-dejavu
+ttf-liberation
+ttf-jetbrains-mono
+ttf-jetbrains-mono-nerd
+ttf-fira-code
+ttf-roboto
+ttf-opensans
+inter-font
+
+# Скриншоты, обои, буфер обмена
+swww
+grim
+slurp
+wl-clipboard
+cliphist
+swaybg
+imagemagick
+ffmpeg
+ffmpegthumbs
+tumbler
+
+# Мелочи рабочего стола
+playerctl
+brightnessctl
+gnome-keyring
+libsecret
+seahorse

@@ -1,0 +1,67 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "spacing": 4,
+    "modules-left": ["hyprland/workspaces", "hyprland/window"],
+    "modules-center": ["clock"],
+    "modules-right": ["tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
+
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{icon}",
+        "format-icons": {
+            "1": "1", "2": "2", "3": "3", "4": "4", "5": "5",
+            "6": "6", "7": "7", "8": "8", "9": "9", "10": "10",
+            "active": "", "default": ""
+        }
+    },
+    "hyprland/window": {
+        "format": "{}",
+        "max-length": 60,
+        "separator": "  —  ",
+        "rewrite": { "(.*) — Mozilla Firefox": "Firefox: $1" }
+    },
+    "clock": {
+        "format": "{:%H:%M}",
+        "tooltip-format": "{:%A, %d %B %Y}"
+    },
+    "clock2": {
+        "format": " {:%d.%m}",
+        "tooltip": false
+    },
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "  muted",
+        "format-icons": { "default": ["", "", ""] },
+        "on-click": "pavucontrol",
+        "on-click-right": "pamixer -t"
+    },
+    "network": {
+        "format-wifi": " {essid} {signalStrength}%",
+        "format-ethernet": " {ipaddr}/{cidr}",
+        "format-disconnected": "  нет сети",
+        "on-click": "nm-connection-editor",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+        "interval": 5
+    },
+    "bluetooth": {
+        "format": " {status}",
+        "format-connected": " {device_alias}",
+        "format-disabled": " off",
+        "on-click": "blueman-manager",
+        "tooltip": false
+    },
+    "battery": {
+        "states": { "warning": 30, "critical": 12 },
+        "format": "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-icons": ["", "", "", "", ""],
+        "tooltip": true
+    },
+    "tray": {
+        "icon-size": 18,
+        "spacing": 8
+    }
+}

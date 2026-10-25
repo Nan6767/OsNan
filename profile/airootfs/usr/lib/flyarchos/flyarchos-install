@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# flyarchos-install — запуск установщика FlyArchOs (Calamares).
+# Работает и из live-сессии, и из уже установленной системы (в ней Calamares
+# удалён, поэтому предлагаем archinstall).
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+CALAMARES_CFG=/etc/calamares
+BRANDING=flyarchos
+
+need_root() {
+    if [ "$(id -u)" -eq 0 ]; then
+        return 0
+    fi
+    if command -v sudo >/dev/null 2>&1; then
+        exec sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM \
+             /usr/bin/flyarchos-install "$@"
+    fi
+    if command -v pkexec >/dev/null 2>&1; then
+        exec pkexec /usr/bin/flyarchos-install "$@"
+    fi
+    echo "Нужны права root (sudo/pkexec)." >&2
+    exit 1
+}
+
+if [ "${1:-}" != "--no-root-check" ]; then
+    need_root "$@"
+fi
+
+if command -v calamares >/dev/null 2>&1 && [ -f "$CALAMARES_CFG/settings.conf" ]; then
+    echo "Запускаем Calamares (брендинг: $BRANDING)…"
+    # -c указывает каталог с settings.conf и modules/
+    exec calamares -c "$CALAMARES_CFG"
+fi
+
+if command -v archinstall >/dev/null 2>&1; then
+    echo "Calamares не найден (установленная система?) — запускаем archinstall."
+    exec archinstall
+fi
+
+echo "Не найден ни Calamares, ни archinstall." >&2
+echo "Установите систему вручную: https://wiki.archlinux.org/title/Installation_guide" >&2
+exit 1

@@ -1,0 +1,142 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — базовая система (ставится всегда, не удаляется установщиком)
+# Формат: по одному имени пакета в строке, '#' — комментарий.
+# ---------------------------------------------------------------------------
+
+# Ядро и прошивки
+base
+base-devel
+linux
+linux-headers
+linux-lts
+linux-lts-headers
+linux-firmware
+intel-ucode
+amd-ucode
+mkinitcpio
+mkinitcpio-busybox
+
+# Загрузка и диски
+grub
+efibootmgr
+os-prober
+dosfstools
+ntfs-3g
+exfatprogs
+e2fsprogs
+btrfs-progs
+xfsprogs
+f2fs-tools
+gptfdisk
+parted
+gparted
+udisks2
+squashfs-tools
+arch-install-scripts
+snapper
+
+# Сеть
+networkmanager
+network-manager-applet
+wpa_supplicant
+iw
+iwd
+dhcpcd
+openssh
+rsync
+curl
+wget
+inetutils
+iproute2
+net-tools
+bind
+traceroute
+reflector
+
+# Консоль и утилиты
+sudo
+bash-completion
+zsh
+zsh-completions
+zsh-syntax-highlighting
+zsh-autosuggestions
+man-db
+man-pages
+texinfo
+vim
+nano
+neovim
+git
+less
+which
+tree
+htop
+btop
+ncdu
+bat
+eza
+fd
+ripgrep
+fzf
+jq
+tmux
+fastfetch
+pacman-contrib
+archlinux-keyring
+zram-generator
+
+# Архивы
+unzip
+unrar
+p7zip
+lzop
+zstd
+xz
+pigz
+pbzip2
+trash-cli
+
+# Железо/питание
+pciutils
+usbutils
+dmidecode
+fwupd
+thermald
+tlp
+
+# Звук (PipeWire)
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+alsa-utils
+alsa-firmware
+sof-firmware
+pavucontrol
+
+# Bluetooth / печать / автопоиск устройств
+bluez
+bluez-utils
+blueman
+cups
+system-config-printer
+sane
+simple-scan
+avahi
+nss-mdns
+
+# Права доступа, шины, порталы
+polkit
+xdg-utils
+xdg-user-dirs
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+gvfs
+gvfs-mtp
+
+# Языки (рантайм)
+python
+python-pip
+nodejs
+npm

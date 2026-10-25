@@ -1,0 +1,11 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — набор «Офис» (выбирается в установщике)
+# ---------------------------------------------------------------------------
+
+libreoffice-fresh
+libreoffice-fresh-ru
+thunderbird
+thunderbird-i18n-ru
+pdfarranger
+zathura
+zathura-pdf-mupdf

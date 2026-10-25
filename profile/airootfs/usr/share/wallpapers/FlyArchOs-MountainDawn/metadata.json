@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Mountain Dawn»",
+        "Id": "FlyArchOs-MountainDawn",
+        "License": "CC0-1.0",
+        "Name": "Mountain Dawn"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

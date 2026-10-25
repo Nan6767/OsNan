@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# flyarchos-info — краткая справка о системе и полезных командах.
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+C_CYAN=$'\033[36m'; C_MAG=$'\033[35m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
+
+echo
+cat /usr/share/flyarchos/logo.txt 2>/dev/null
+echo
+
+if [ -r /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    echo "${C_CYAN}${PRETTY_NAME:-FlyArchOs Linux}${C_OFF}"
+fi
+printf '  Ядро:        %s\n' "$(uname -r)"
+printf '  Окружение:   %s\n' "${XDG_CURRENT_DESKTOP:-${XDG_SESSION_DESKTOP:-консоль}}"
+printf '  Сессия:      %s\n' "${XDG_SESSION_TYPE:-tty}"
+printf '  Хост:        %s\n' "$(cat /etc/hostname 2>/dev/null)"
+printf '  Время работы:%s\n' "$(uptime -p 2>/dev/null | sed 's/^up //')"
+echo
+if [ -f /etc/flyarchos/profile.json ] && command -v python3 >/dev/null 2>&1; then
+    python3 - <<'PY'
+import json
+try:
+    data = json.load(open("/etc/flyarchos/profile.json"))
+    print(f"  Установлено: {data.get('desktop','both')}" +
+          (f" + {', '.join(data.get('extras', []))}" if data.get('extras') else ""))
+except Exception:
+    pass
+PY
+fi
+echo
+echo "${C_MAG}Команды FlyArchOs:${C_OFF}"
+cat <<'EOF'
+  flyarchos-welcome          помощник первого запуска (обои, наборы ПО)
+  flyarchos-wallpaper list   список обоев
+  flyarchos-wallpaper set ID поставить обои (или random)
+  flyarchos-wallpaper-gen    сгенерировать свои обои (--list)
+  flyarchos-profile show     какой набор ПО установлен / что будет удалено
+  flyarchos-profile --apply  изменить набор ПО
+  flyarchos-install          запустить установщик (Calamares)
+EOF
+echo
+echo "${C_DIM}Горячие клавиши Hyprland: SUPER+Enter — терминал, SUPER+D — меню,"
+echo "SUPER+Q — закрыть окно, SUPER+F — полный экран, SUPER+1..9 — рабочие столы.${C_OFF}"
+echo
+
+if command -v fastfetch >/dev/null 2>&1; then
+    fastfetch --config "${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/config.jsonc" 2>/dev/null || fastfetch
+fi

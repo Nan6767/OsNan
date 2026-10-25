@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=FlyArchOs Welcome
+Name[ru]=Добро пожаловать в FlyArchOs
+Comment=First run assistant: wallpapers, software sets, system info
+Comment[ru]=Помощник первого запуска: обои, наборы ПО, информация о системе
+Exec=/usr/bin/flyarchos-welcome
+Icon=flyarchos
+Terminal=false
+StartupNotify=true
+Categories=System;Qt;Settings;
+Keywords=welcome;wallpaper;settings;

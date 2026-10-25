@@ -1,0 +1,7 @@
+# FlyArchOs — обои рабочего стола KDE Plasma по умолчанию.
+# Меняются через «Параметры системы → Внешний вид» или
+# flyarchos-wallpaper set <id>
+[Containments][1][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/backgrounds/flyarchos/default.jpg
+FillMode=2
+PreviewImage=file:///usr/share/backgrounds/flyarchos/default.jpg

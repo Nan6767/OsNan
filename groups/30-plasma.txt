@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# FlyArchOs — KDE Plasma (полный рабочий стол + SDDM)
+# ---------------------------------------------------------------------------
+
+# Само окружение
+plasma-meta
+plasma-wayland-session
+plasma-workspace-wallpapers
+plasma-nm
+plasma-pa
+plasma-systemmonitor
+kdeplasma-addons
+kinfocenter
+kscreen
+powerdevil
+bluedevil
+kde-cli-tools
+kio-extras
+xdg-desktop-portal-kde
+
+# Менеджер входа
+sddm
+sddm-kcm
+
+# Базовые приложения KDE
+dolphin
+dolphin-plugins
+konsole
+kate
+kwrite
+kcalc
+gwenview
+spectacle
+okular
+ark
+kfind
+elisa
+kdeconnect
+systemsettings
+kwalletmanager
+discover
+packagekit-qt6
+packagekit
+kdegraphics-thumbnailers
+kimageformats
+qt6-imageformats
+qt6-multimedia

@@ -1,0 +1,15 @@
+[global]
+width = 720
+height = 520
+location = center
+show = drun
+prompt = FlyArchOs
+gtk_dark = true
+allow_images = true
+allow_markup = true
+insensitive = true
+hide_scroll = true
+term = kitty
+normal_window = false
+orientation = vertical
+columns = 1

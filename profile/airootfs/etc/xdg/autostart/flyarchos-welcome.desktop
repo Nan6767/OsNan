@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=FlyArchOs Welcome
+Name[ru]=Добро пожаловать в FlyArchOs
+Comment=Runs once after the first login (disable via the checkbox in the window)
+Comment[ru]=Запускается один раз после первого входа (отключается галочкой в окне)
+Exec=/usr/bin/flyarchos-welcome --autostart
+Icon=flyarchos
+Terminal=false
+StartupNotify=false
+X-KDE-autostart-after=panel
+X-GNOME-Autostart-Delay=5
