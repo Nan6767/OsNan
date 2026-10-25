@@ -78,6 +78,18 @@ if [ "$WITH_AUR" = "--aur" ]; then
     ./scripts/build-aur.sh || warn "AUR собран частично — продолжаем без него"
 fi
 
+# Быстрая проверка: все ли имена пакетов находятся в репозиториях.
+# Так ошибку в groups/*.txt видно за секунды, а не через час pacstrap-а.
+log "Предпроверка имён пакетов (profile/packages.x86_64)"
+mapfile -t PKGS < <(grep -vE '^\s*(#|$)' profile/packages.x86_64)
+if ! pacman -S --print-format '%n' --noconfirm "${PKGS[@]}" >/tmp/pkgcheck.out 2>/tmp/pkgcheck.err; then
+    warn "часть пакетов не находится в репозиториях:"
+    grep -E "не найден|not found|target not found|указан неверно" /tmp/pkgcheck.err | head -40
+    tail -20 /tmp/pkgcheck.err
+    die "исправьте имена пакетов в groups/*.txt"
+fi
+echo "  пакетов к установке: ${#PKGS[@]} (все найдены)"
+
 log "Сборка ISO"
 ./scripts/build-iso.sh --clean --profile "$PROFILE_NAME"
 

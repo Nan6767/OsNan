@@ -154,7 +154,7 @@ fi
 # --- 7b. slim: скрываем в установщике наборы, которых нет в образе --------
 if [ "$PROFILE_NAME" = "slim" ]; then
     log "Профиль slim: убираем страницу «Наборы ПО» из установщика"
-    python3 - "$WORK/profile/etc/calamares/settings.conf" <<'PY'
+    python3 - "$WORK/profile/airootfs/etc/calamares/settings.conf" <<'PY'
 import re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
