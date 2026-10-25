@@ -106,7 +106,13 @@ python3 scripts/gen-packages.py "${GEN_ARGS[@]}" >/dev/null
 mapfile -t PKGS < <(grep -vE '^\s*(#|$)' profile/packages.x86_64)
 if ! pacman -S --print-format '%n' --noconfirm "${PKGS[@]}" >/tmp/pkgcheck.out 2>/tmp/pkgcheck.err; then
     warn "часть пакетов не находится в репозиториях:"
-    grep -iE "not found|не найден|указан неверно" /tmp/pkgcheck.err | head -40
+    missing=$(grep -oE "target not found: [^ ]+|не найден: [^ ]+" /tmp/pkgcheck.err | awk '{print $NF}' | sort -u)
+    for name in $missing; do
+        echo "  НЕ НАЙДЕН: $name"
+        echo -n "    похожие пакеты: "
+        pacman -Ssq "$name" 2>/dev/null | head -6 | tr '\n' ' '
+        echo
+    done
     tail -20 /tmp/pkgcheck.err
     die "исправьте имена пакетов в groups/*.txt"
 fi

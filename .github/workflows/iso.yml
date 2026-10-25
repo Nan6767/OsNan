@@ -35,6 +35,9 @@ jobs:
     name: mkarchiso
     runs-on: ubuntu-latest
     timeout-minutes: 330
+    # Нужно, чтобы сборка могла сама приложить ISO к релизу и запушить лог.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -122,6 +125,26 @@ jobs:
           path: |
             out/*.iso
             out/*.sha256
-          retention-days: 7
+          retention-days: 90
           if-no-files-found: error
           compression-level: 0
+
+      - name: Публикация ISO в релиз GitHub
+        if: ${{ success() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          tag="iso-${{ github.run_number }}"
+          iso=$(ls -1 out/*.iso | head -1)
+          gh release create "$tag" \
+            --title "FlyArchOs ISO — ${{ steps.cfg.outputs.profile }} (run ${{ github.run_number }}, $(date -u +%F))" \
+            --notes "Автоматическая сборка FlyArchOs (Arch Linux + Hyprland + KDE Plasma, установщик Calamares).
+
+          Профиль: ${{ steps.cfg.outputs.profile }}
+          Запуск: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          Контрольная сумма — в файле .sha256 рядом с образом." \
+            "$iso" "$iso.sha256"
+          echo "Релиз $tag опубликован"

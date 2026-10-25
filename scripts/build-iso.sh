@@ -191,9 +191,11 @@ log "Проверка дерева (scripts/check.py)"
 python3 "$REPO_ROOT/scripts/check.py" || warn "проверка нашла замечания — смотрите вывод выше"
 
 # --- 9. сборка -------------------------------------------------------------
-log "Запуск mkarchiso (это надолго: ставится ~700 пакетов)"
+log "Запуск mkarchiso (это надолго: ставится много пакетов)"
+df -h "$REPO_ROOT" | tail -1
 start=$(date +%s)
 mkarchiso $VERBOSE -w "$WORK" -o "$OUT" "$WORK/profile"
+df -h "$REPO_ROOT" | tail -1
 
 iso=$(ls -1t "$OUT"/*.iso 2>/dev/null | head -n1 || true)
 [ -n "$iso" ] || die "mkarchiso не создал ISO (проверьте вывод выше)"
