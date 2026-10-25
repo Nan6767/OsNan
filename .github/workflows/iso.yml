@@ -80,8 +80,11 @@ jobs:
         run: |
           tail -60 build.log || echo "(лог пуст)"
           if [ -s build.log ]; then
-            msg=$(tail -n 40 build.log | tr '\n\r' '~~' | sed 's/%/%25/g; s/::/../g' | cut -c1-1800)
-            echo "::error::BUILDLOG=${msg}"
+            clean=$(sed -r 's/\x1b\[[0-9;]*m//g' build.log)
+            head=$(echo "$clean" | head -n 12 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)
+            tailmsg=$(echo "$clean" | tail -n 15 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-1800)
+            echo "::error::BUILDLOG_HEAD=${head}"
+            echo "::error::BUILDLOG_TAIL=${tailmsg}"
           else
             echo "::error::BUILDLOG пуст"
           fi

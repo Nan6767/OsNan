@@ -78,9 +78,13 @@ fi
 [ "$ONLY_CHECK" = "1" ] && { log "Окружение в порядке."; exit 0; }
 
 # --- 2. список пакетов -----------------------------------------------------
-log "Генерация списка пакетов из groups/"
-python3 "$REPO_ROOT/scripts/gen-packages.py" --stats | sed 's/^/    /'
-python3 "$REPO_ROOT/scripts/gen-packages.py"
+log "Генерация списка пакетов из groups/ (профиль: $PROFILE_NAME)"
+GEN_ARGS=()
+if [ "$PROFILE_NAME" = "slim" ]; then
+    GEN_ARGS=(--only-groups "$SLIM_GROUPS")
+fi
+python3 "$REPO_ROOT/scripts/gen-packages.py" --stats "${GEN_ARGS[@]}" | sed 's/^/    /'
+python3 "$REPO_ROOT/scripts/gen-packages.py" "${GEN_ARGS[@]}"
 
 # --- 3. локальный репозиторий AUR (по желанию) -----------------------------
 if [ "$AUR" = "1" ]; then
