@@ -22,15 +22,14 @@ airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '19' '-b' '1M' '-noappend')
 
 # Права доступа на чувствительные файлы внутри образа (пользователь fly = 1000)
+# ВАЖНО: здесь только те пути, которые УЖЕ лежат в airootfs/ на момент
+# копирования дерева. mkarchiso падает, если пути нет или он вне airootfs.
+# Права на /home/fly, /etc/sudoers.d/10-flyarchos-live и symlink'и в /usr/bin
+# выставляет profile/customize_airootfs.sh — они создаются уже в chroot.
 file_permissions=(
     ["/etc/shadow"]="0:0:400"
     ["/etc/gshadow"]="0:0:400"
-    ["/etc/sudoers"]="0:0:440"
     ["/etc/sudoers.d"]="0:0:750"
-    ["/etc/sudoers.d/10-flyarchos-live"]="0:0:440"
-    ["/root"]="0:0:750"
-    ["/home/fly"]="1000:1000:750"
-    ["/home/fly/.config"]="1000:1000:700"
     ["/usr/bin/flyarchos-profile"]="0:0:755"
     ["/usr/bin/flyarchos-wallpaper"]="0:0:755"
     ["/usr/bin/flyarchos-wallpaper-gen"]="0:0:755"
@@ -38,7 +37,9 @@ file_permissions=(
     ["/usr/bin/flyarchos-info"]="0:0:755"
     ["/usr/bin/flyarchos-install"]="0:0:755"
     ["/usr/lib/flyarchos/profile_tool.py"]="0:0:755"
+    ["/usr/lib/flyarchos/wallpapers.py"]="0:0:755"
     ["/usr/lib/flyarchos/wallpaper_tool.py"]="0:0:755"
-    ["/usr/lib/flyarchos/welcome.py"]="0:0:755"
     ["/usr/lib/flyarchos/welcome-gui.py"]="0:0:755"
+    ["/usr/lib/flyarchos/install-prepare.sh"]="0:0:755"
+    ["/usr/lib/flyarchos/install-finalize.sh"]="0:0:755"
 )

@@ -299,6 +299,48 @@ def check_shellprocess_targets(report: Report) -> None:
     report.add("shellprocess: цели существуют в airootfs", not problems, "; ".join(problems))
 
 
+# Эти файлы появляются в airootfs только после pacstrap (их приносит пакет
+# filesystem) — их отсутствие в дереве репозитория не ошибка.
+PACSTRAP_PATHS = {"/etc/shadow", "/etc/gshadow", "/etc/passwd", "/etc/group"}
+
+
+def check_file_permissions(report: Report) -> None:
+    """Пути из file_permissions должны существовать в airootfs — иначе mkarchiso падает."""
+    profiledef = PROFILE / "profiledef.sh"
+    if not profiledef.is_file():
+        report.add("Права файлов (profiledef.sh)", False, "нет profile/profiledef.sh")
+        return
+    text = profiledef.read_text(encoding="utf-8")
+    match = re.search(r"file_permissions=\((.*?)\n\)", text, re.S)
+    if not match:
+        report.add("Права файлов (profiledef.sh)", False, "нет блока file_permissions")
+        return
+    entries = re.findall(r'\["([^"]+)"\]="([^"]+)"', match.group(1))
+    problems = []
+    for path, perm in entries:
+        if path in PACSTRAP_PATHS:
+            continue
+        if not (AIROOTFS / path.lstrip("/")).exists():
+            problems.append(f"{path} — нет в airootfs")
+        if len(perm.split(":")) != 3:
+            problems.append(f"{path} — права должны быть uid:gid:mode, а не {perm!r}")
+    report.add("Права файлов (profiledef.sh)", not problems, "; ".join(problems))
+
+
+def check_pacman_template(report: Report) -> None:
+    """Метка @FLYARCHOS_REPO@ должна стоять отдельной строкой: mkarchiso
+    требует, чтобы каждая директива pacman.conf была внутри секции."""
+    template = PROFILE / "pacman.conf.in"
+    if not template.is_file():
+        report.add("Шаблон pacman.conf", False, "нет profile/pacman.conf.in")
+        return
+    problems = []
+    for number, line in enumerate(template.read_text(encoding="utf-8").splitlines(), 1):
+        if "@FLYARCHOS_REPO@" in line and line.strip() != "@FLYARCHOS_REPO@":
+            problems.append(f"строка {number}: метка не на отдельной строке")
+    report.add("Шаблон pacman.conf", not problems, "; ".join(problems))
+
+
 def check_wallpapers(report: Report) -> None:
     manifest = AIROOTFS / "usr" / "share" / "flyarchos" / "wallpapers.json"
     problems = []
@@ -431,6 +473,8 @@ def main() -> int:
     check_shellprocess_targets(report)
     check_groups(report)
     check_packages_list(report)
+    check_file_permissions(report)
+    check_pacman_template(report)
     check_installer_scripts(report)
     check_wallpapers(report)
     check_skel(report)
