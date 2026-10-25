@@ -57,19 +57,41 @@ jobs:
           df -h /
 
       - name: Сборка ISO в контейнере archlinux
+        id: build
         run: |
+          set -o pipefail
           docker run --rm --privileged \
             -v "$GITHUB_WORKSPACE:/flyarchos" -w /flyarchos \
             archlinux:latest \
             ./scripts/ci-build.sh \
               "${{ github.event_name == 'workflow_dispatch' && inputs.profile || steps.cfg.outputs.profile }}" \
-              ${{ inputs.aur && '--aur' || '' }}
+              ${{ inputs.aur && '--aur' || '' }} 2>&1 | tee build.log
 
       - name: Информация об образе
         run: |
-          ls -lh out/
+          ls -lh out/ || true
           cat out/*.sha256 || true
           df -h / | tail -1
+
+      # Логи Actions недоступны извне (блоки сети), поэтому сохраняем их
+      # в репозиторий — так сборку удобно отлаживать.
+      - name: Сохранить лог сборки в репозиторий
+        if: always()
+        run: |
+          mkdir -p logs
+          { echo "# Сборка ISO: run ${{ github.run_number }}, профиль ${{ steps.cfg.outputs.profile }}, $(date -u +%FT%TZ)"
+            echo "# Статус шага сборки: ${{ steps.build.outcome }}"
+            echo
+            cat build.log 2>/dev/null || echo "(лог пуст)"; } > "logs/iso-run-${{ github.run_number }}.log"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add logs
+          if ! git diff --cached --quiet; then
+            git commit -m "Лог сборки ISO (run ${{ github.run_number }})"
+            git push
+          else
+            echo "лог пуст — коммитить нечего"
+          fi
 
       - name: Артефакты
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.upload }}

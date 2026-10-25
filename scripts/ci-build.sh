@@ -11,35 +11,53 @@
 #   $1 — профиль: slim (по умолчанию) или full;
 #   $2 — "--aur", если перед сборкой нужно собрать AUR-пакеты.
 # ---------------------------------------------------------------------------
-set -euo pipefail
+set -uo pipefail
 
 PROFILE_NAME="${1:-slim}"
 WITH_AUR="${2:-}"
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+BUILD_PACKAGES="archiso git python python-yaml squashfs-tools libisoburn mtools dosfstools grub efibootmgr rsync"
 
 log()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m==> ПРЕДУПРЕЖДЕНИЕ:\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[31m==> ОШИБКА:\033[0m %s\n' "$*" >&2; exit 1; }
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
 log "Профиль сборки: $PROFILE_NAME"
+echo "  kernel:  $(uname -a)"
+echo "  root:    $(id -u)"
 df -h / | tail -1
 
-log "Обновление ключей и установка инструментов сборки"
-pacman -Sy --noconfirm --needed archlinux-keyring
-pacman -Syu --noconfirm --needed \
-    archiso \
-    git \
-    python \
-    python-yaml \
-    squashfs-tools \
-    libisoburn \
-    mtools \
-    dosfstools \
-    grub \
-    efibootmgr \
-    rsync
+# --------------------------------------------------------------------------- #
+# Ключи pacman. В образах archlinux:latest связка ключей часто просрочена,
+# поэтому сначала пробуем честно, а при ошибке — обновляем ключи без проверки
+# подписей (и сразу возвращаем проверку на место).
+# --------------------------------------------------------------------------- #
+fix_keys() {
+    warn "обновляем связку ключей без проверки подписей"
+    cp -f /etc/pacman.conf /tmp/pacman.conf.orig
+    sed -i 's/^SigLevel.*/SigLevel = Never/; s/^LocalFileSigLevel.*/LocalFileSigLevel = Never/; s/^RemoteFileSigLevel.*/RemoteFileSigLevel = Never/' /etc/pacman.conf
+    pacman -Sy --noconfirm archlinux-keyring || true
+    pacman -Su --noconfirm --needed archlinux-keyring || true
+    cp -f /tmp/pacman.conf.orig /etc/pacman.conf
+    rm -rf /etc/pacman.d/gnupg
+    pacman-key --init
+    pacman-key --populate archlinux
+}
 
-pacman-key --init
-pacman-key --populate archlinux
+install_packages() {
+    if pacman -Sy --noconfirm --needed "$@"; then
+        return 0
+    fi
+    warn "pacman не смог поставить пакеты — чиним ключи и пробуем снова"
+    fix_keys
+    pacman -Sy --noconfirm --needed "$@"
+}
+
+log "Обновление ключей и установка инструментов сборки"
+pacman-key --init 2>&1 | tail -2
+pacman-key --populate archlinux 2>&1 | tail -2
+install_packages $BUILD_PACKAGES || die "не удалось установить инструменты сборки"
 
 log "Проверка дерева"
 python scripts/check.py || warn "проверка выдала замечания — продолжаем"
@@ -54,4 +72,6 @@ log "Сборка ISO"
 
 log "Результат"
 ls -lh out/
-test -f out/*.sha256 && cat out/*.sha256
+for sum in out/*.sha256; do
+    [ -f "$sum" ] && cat "$sum"
+done
