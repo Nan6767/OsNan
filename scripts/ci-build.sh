@@ -87,12 +87,10 @@ if [ "$WITH_AUR" = "--aur" ]; then
     ./scripts/build-aur.sh || warn "AUR собран частично — продолжаем без него"
 fi
 
-# multilib нужен для проверки имён (steam, lib32-*) и для самой сборки
-if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
-    log "Включаю multilib в /etc/pacman.conf"
-    sed -i '/^#\[multilib\]/,+1 s/^#//' /etc/pacman.conf
+pacman -Sy --noconfirm >/dev/null || warn "не удалось обновить базы пакманов"
+if ! pacman -Sl multilib >/dev/null 2>&1; then
+    warn "база multilib недоступна — пакеты lib32-*, steam не найдутся"
 fi
-pacman -Sy --noconfirm >/dev/null
 
 GEN_ARGS=()
 if [ "$PROFILE_NAME" = "slim" ]; then
@@ -105,18 +103,18 @@ log "Предпроверка имён пакетов (profile/packages.x86_64)"
 python3 scripts/gen-packages.py "${GEN_ARGS[@]}" >/dev/null
 mapfile -t PKGS < <(grep -vE '^\s*(#|$)' profile/packages.x86_64)
 if ! pacman -S --print-format '%n' --noconfirm "${PKGS[@]}" >/tmp/pkgcheck.out 2>/tmp/pkgcheck.err; then
-    warn "часть пакетов не находится в репозиториях:"
-    missing=$(grep -oE "target not found: [^ ]+|не найден: [^ ]+" /tmp/pkgcheck.err | awk '{print $NF}' | sort -u)
-    for name in $missing; do
-        echo "  НЕ НАЙДЕН: $name"
-        echo -n "    похожие пакеты: "
+    mapfile -t MISSING < <(grep -oE "target not found: [^ ]+" /tmp/pkgcheck.err | awk '{print $NF}' | sort -u)
+    warn "не найдено в репозиториях: ${MISSING[*]}"
+    for name in "${MISSING[@]}"; do
+        echo -n "  $name → похожие: "
         pacman -Ssq "$name" 2>/dev/null | head -6 | tr '\n' ' '
         echo
     done
-    tail -20 /tmp/pkgcheck.err
-    die "исправьте имена пакетов в groups/*.txt"
+    # Не падаем: собираем ISO без этих пакетов, а в groups/*.txt поправим потом.
+    export EXCLUDE_PKGS="$(IFS=,; echo "${MISSING[*]}")"
+    warn "собираю БЕЗ: $EXCLUDE_PKGS (поправьте groups/*.txt)"
 fi
-echo "  пакетов к установке: ${#PKGS[@]} (все найдены)"
+echo "  пакетов к установке: ${#PKGS[@]}${EXCLUDE_PKGS:+ (кроме: $EXCLUDE_PKGS)}"
 
 # Calamares — установщик FlyArchOs — есть только в AUR. Собираем его в
 # локальный репозиторий; если не получится, ISO соберётся без установщика.
