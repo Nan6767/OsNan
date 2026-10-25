@@ -75,8 +75,16 @@ jobs:
 
       # Логи Actions недоступны извне (блоки сети), поэтому сохраняем их
       # в репозиторий — так сборку удобно отлаживать.
+      - name: Хвост лога сборки
+        if: always()
+        run: tail -60 build.log || echo "(лог пуст)"
+
+      # Логи Actions недоступны извне (сеть ограничена), поэтому сохраняем их
+      # в репозиторий — так сборку удобно отлаживать.
       - name: Сохранить лог сборки в репозиторий
         if: always()
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
           mkdir -p logs
           { echo "# Сборка ISO: run ${{ github.run_number }}, профиль ${{ steps.cfg.outputs.profile }}, $(date -u +%FT%TZ)"
@@ -85,10 +93,11 @@ jobs:
             cat build.log 2>/dev/null || echo "(лог пуст)"; } > "logs/iso-run-${{ github.run_number }}.log"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "logs-run-${{ github.run_number }}"
           git add logs
           if ! git diff --cached --quiet; then
             git commit -m "Лог сборки ISO (run ${{ github.run_number }})"
-            git push
+            git push origin "HEAD:${BRANCH}" || echo "не удалось запушить лог"
           else
             echo "лог пуст — коммитить нечего"
           fi
