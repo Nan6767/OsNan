@@ -52,6 +52,26 @@ else
     warn "devtools не настроен — собираем makepkg в текущей системе (makepkg -s)"
 fi
 
+# makepkg принципиально отказывается работать под root → нужен отдельный
+# пользователь с правом ставить зависимости через sudo.
+BUILD_USER=""
+if [ "$(id -u)" -eq 0 ]; then
+    BUILD_USER=builder
+    if ! id -u builder >/dev/null 2>&1; then
+        log "Создаю пользователя builder (makepkg запрещён под root)"
+        useradd -m -s /bin/bash builder
+    fi
+    if command -v sudo >/dev/null 2>&1; then
+        echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/99-builder
+        chmod 440 /etc/sudoers.d/99-builder
+        usermod -aG wheel builder 2>/dev/null || true
+    else
+        warn "нет sudo — makepkg не сможет сам ставить зависимости (pacman -S --needed base-devel sudo)"
+    fi
+    mkdir -p "$BUILD_DIR" "$REPO_DIR"
+    chown -R builder:builder "$BUILD_DIR" "$REPO_DIR" 2>/dev/null || true
+fi
+
 for pkg in "${PACKAGES[@]}"; do
     src="$BUILD_DIR/$pkg"
     if [ -d "$src/.git" ]; then
@@ -65,14 +85,24 @@ for pkg in "${PACKAGES[@]}"; do
     fi
 
     built=0
-    (
-        cd "$src"
+    if [ -n "$BUILD_USER" ]; then
+        chown -R "$BUILD_USER" "$src" 2>/dev/null || true
         if [ "$USE_CHROOT" = "1" ]; then
-            extra-x86_64-build -- -A --noconfirm || makepkg -s --noconfirm --skippgpcheck
+            su "$BUILD_USER" -c "cd '$src' && extra-x86_64-build -- -A --noconfirm" \
+                || su "$BUILD_USER" -c "cd '$src' && makepkg -s --noconfirm --skippgpcheck --cleanbuild"
         else
-            makepkg -s --noconfirm --skippgpcheck --cleanbuild
-        fi
-    ) && built=1
+            su "$BUILD_USER" -c "cd '$src' && makepkg -s --noconfirm --skippgpcheck --cleanbuild"
+        fi && built=1
+    else
+        (
+            cd "$src"
+            if [ "$USE_CHROOT" = "1" ]; then
+                extra-x86_64-build -- -A --noconfirm || makepkg -s --noconfirm --skippgpcheck
+            else
+                makepkg -s --noconfirm --skippgpcheck --cleanbuild
+            fi
+        ) && built=1
+    fi
 
     if [ "$built" = "1" ]; then
         found=$(ls -1 "$src"/*.pkg.tar.* 2>/dev/null | head -n1 || true)

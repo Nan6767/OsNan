@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 301
+# Всего пакетов: 297
 # Профиль: full (все группы)
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -129,7 +129,7 @@ python-pip
 nodejs
 npm
 
-# --- common (10-common.txt): 42 шт. --------------------
+# --- common (10-common.txt): 40 шт. --------------------
 xorg-xwayland
 xorg-xrandr
 qt5-wayland
@@ -139,11 +139,9 @@ qt6ct
 breeze
 breeze-gtk
 breeze-icons
-xcursor-breeze
 hicolor-icon-theme
 adwaita-icon-theme
 papirus-icon-theme
-arc-gtk-theme
 fontconfig
 noto-fonts
 noto-fonts-cjk
@@ -189,9 +187,8 @@ thunar-archive-plugin
 thunar-volman
 xarchiver
 
-# --- plasma (30-plasma.txt): 38 шт. --------------------
+# --- plasma (30-plasma.txt): 37 шт. --------------------
 plasma-meta
-plasma-wayland-session
 plasma-workspace-wallpapers
 plasma-nm
 plasma-pa
@@ -324,8 +321,7 @@ pdfarranger
 zathura
 zathura-pdf-mupdf
 
-# --- live (99-live.txt): 4 шт. --------------------
-calamares
+# --- live (99-live.txt): 3 шт. --------------------
 archinstall
 clonezilla
 testdisk

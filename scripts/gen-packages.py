@@ -66,6 +66,19 @@ def parse_group(path: Path) -> list[str]:
     return packages
 
 
+def local_repo_packages(repo_dir: Path) -> set[str]:
+    """Return package names actually present in the local repository *repo_dir*."""
+    built: set[str] = set()
+    if not repo_dir.is_dir():
+        return built
+    for path in repo_dir.glob("*.pkg.tar.zst"):
+        # формат: имя-версия-релиз-архитектура.pkg.tar.zst
+        parts = path.name[: -len(".pkg.tar.zst")].rsplit("-", 3)
+        if len(parts) == 4:
+            built.add(parts[0])
+    return built
+
+
 def load_groups(groups_dir: Path) -> list[tuple[str, Path, list[str]]]:
     """Load every ``NN-name.txt`` file from *groups_dir*, ordered by number."""
     if not groups_dir.is_dir():
@@ -104,6 +117,8 @@ def main() -> int:
     parser.add_argument("--aur-out", type=Path, default=DEFAULT_AUR_OUT)
     parser.add_argument("--only-groups", default="",
                        help="ограничить состав (например core,common,hyprland,plasma,apps,live)")
+    parser.add_argument("--exclude", default="",
+                       help="исключить пакеты по именам (через запятую) — например calamares")
     parser.add_argument("--check", action="store_true", help="проверить, что файлы актуальны")
     parser.add_argument("--stats", action="store_true", help="вывести статистику по группам")
     args = parser.parse_args()
@@ -133,11 +148,23 @@ def main() -> int:
         print(f"{'ИТОГО':<{width}}  {total:>4}")
         return 0
 
+    exclude = {name.strip() for name in args.exclude.split(",") if name.strip()}
+    if exclude:
+        groups = [
+            (name, path, [p for p in pkgs if p not in exclude])
+            for name, path, pkgs in groups
+        ]
+
     content = render(groups, args.out.name, only)
+    # В дополнительный список попадают только те AUR-пакеты, которые РЕАЛЬНО
+    # собраны в локальный репозиторий repo/x86_64 — иначе mkarchiso упадёт
+    # с «target not found».
     aur_file = args.groups_dir / "aur.txt"
     aur_content = ""
-    if aur_file.is_file() and not only:  # в slim-профиле AUR не собираем
-        aur_pkgs = parse_group(aur_file)
+    if aur_file.is_file():
+        wanted = [p for p in parse_group(aur_file) if p not in exclude]
+        built = local_repo_packages(REPO_ROOT / "repo" / "x86_64")
+        aur_pkgs = [p for p in wanted if p in built]
         aur_content = "\n".join(aur_pkgs) + "\n" if aur_pkgs else ""
 
     if args.check:

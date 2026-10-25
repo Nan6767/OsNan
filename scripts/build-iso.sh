@@ -77,19 +77,33 @@ if ! check_env; then
 fi
 [ "$ONLY_CHECK" = "1" ] && { log "Окружение в порядке."; exit 0; }
 
-# --- 2. список пакетов -----------------------------------------------------
+# --- 2. локальный репозиторий AUR (по желанию) -----------------------------
+# ВАЖНО: собираем ДО генерации списка — packages.aux формируется по факту
+# наличия пакетов в repo/x86_64.
+if [ "$AUR" = "1" ]; then
+    log "Сборка AUR-пакетов в локальный репозиторий"
+    "$REPO_ROOT/scripts/build-aur.sh" || warn "AUR-пакеты собраны не полностью — ISO соберётся без них"
+fi
+if [ -n "${AUR_ONLY:-}" ]; then
+    log "Сборка AUR-пакетов (выборочно): $AUR_ONLY"
+    # shellcheck disable=SC2086
+    "$REPO_ROOT/scripts/build-aur.sh" --with $AUR_ONLY || warn "AUR-пакеты собраны не полностью — ISO соберётся без них"
+fi
+
+# --- 3. список пакетов -----------------------------------------------------
 log "Генерация списка пакетов из groups/ (профиль: $PROFILE_NAME)"
 GEN_ARGS=()
 if [ "$PROFILE_NAME" = "slim" ]; then
     GEN_ARGS=(--only-groups "$SLIM_GROUPS")
 fi
+if [ -n "${EXCLUDE_PKGS:-}" ]; then
+    GEN_ARGS+=(--exclude "$EXCLUDE_PKGS")
+fi
 python3 "$REPO_ROOT/scripts/gen-packages.py" --stats "${GEN_ARGS[@]}" | sed 's/^/    /'
 python3 "$REPO_ROOT/scripts/gen-packages.py" "${GEN_ARGS[@]}"
 
-# --- 3. локальный репозиторий AUR (по желанию) -----------------------------
-if [ "$AUR" = "1" ]; then
-    log "Сборка AUR-пакетов в локальный репозиторий"
-    "$REPO_ROOT/scripts/build-aur.sh" || warn "AUR-пакеты собраны не полностью — ISO соберётся без них"
+if ! grep -q '^calamares$' profile/packages.x86_64 profile/packages.aux 2>/dev/null; then
+    warn "Calamares не попал в образ (нет в репозиториях или не собран из AUR) — установщика в ISO не будет"
 fi
 
 # --- 4. рабочий профиль ----------------------------------------------------

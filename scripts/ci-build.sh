@@ -60,6 +60,15 @@ echo "  образ:  $(cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME ||
 pacman-key --init 2>&1 | tail -2
 pacman-key --populate archlinux 2>&1 | tail -2
 
+# multilib нужен и для предпроверки имён (steam, lib32-*), и для самой сборки
+if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
+    log "Включаю multilib в /etc/pacman.conf"
+    sed -i '/^#\[multilib\]/,+1 s/^#//' /etc/pacman.conf
+fi
+
+# base-devel + sudo: сборка AUR-пакетов (Calamares) идёт под пользователем builder
+BUILD_PACKAGES="$BUILD_PACKAGES base-devel sudo"
+
 # Полное обновление: в старом контейнере установка новых пакетов поверх
 # старых библиотек приводит к частичному обновлению и ошибкам.
 install_packages --noconfirm -Syu $BUILD_PACKAGES || {
@@ -78,17 +87,37 @@ if [ "$WITH_AUR" = "--aur" ]; then
     ./scripts/build-aur.sh || warn "AUR собран частично — продолжаем без него"
 fi
 
+# multilib нужен для проверки имён (steam, lib32-*) и для самой сборки
+if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
+    log "Включаю multilib в /etc/pacman.conf"
+    sed -i '/^#\[multilib\]/,+1 s/^#//' /etc/pacman.conf
+fi
+pacman -Sy --noconfirm >/dev/null
+
+GEN_ARGS=()
+if [ "$PROFILE_NAME" = "slim" ]; then
+    GEN_ARGS=(--only-groups core,common,hyprland,plasma,apps,live)
+fi
+
 # Быстрая проверка: все ли имена пакетов находятся в репозиториях.
 # Так ошибку в groups/*.txt видно за секунды, а не через час pacstrap-а.
 log "Предпроверка имён пакетов (profile/packages.x86_64)"
+python3 scripts/gen-packages.py "${GEN_ARGS[@]}" >/dev/null
 mapfile -t PKGS < <(grep -vE '^\s*(#|$)' profile/packages.x86_64)
 if ! pacman -S --print-format '%n' --noconfirm "${PKGS[@]}" >/tmp/pkgcheck.out 2>/tmp/pkgcheck.err; then
     warn "часть пакетов не находится в репозиториях:"
-    grep -E "не найден|not found|target not found|указан неверно" /tmp/pkgcheck.err | head -40
+    grep -iE "not found|не найден|указан неверно" /tmp/pkgcheck.err | head -40
     tail -20 /tmp/pkgcheck.err
     die "исправьте имена пакетов в groups/*.txt"
 fi
 echo "  пакетов к установке: ${#PKGS[@]} (все найдены)"
+
+# Calamares — установщик FlyArchOs — есть только в AUR. Собираем его в
+# локальный репозиторий; если не получится, ISO соберётся без установщика.
+log "Сборка Calamares из AUR"
+if ! ./scripts/build-aur.sh --with calamares; then
+    warn "Calamares не собрался — ISO будет без графического установщика"
+fi
 
 log "Сборка ISO"
 ./scripts/build-iso.sh --clean --profile "$PROFILE_NAME"
