@@ -6,6 +6,7 @@ hyprland
 hyprpaper
 hyprlock
 hypridle
+hyprsunset
 xdg-desktop-portal-hyprland
 
 # Панель, лаунчер, уведомления

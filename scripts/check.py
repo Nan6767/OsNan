@@ -418,6 +418,8 @@ def check_installer_scripts(report: Report) -> None:
         "flyarchos-snapshot",
         "doctor_tool.py",
         "theme_tool.py",
+        "backup_tool.py",
+        "flyarchos-clean",
     ]
     missing = []
     non_exec = []

@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Abyss»",
+        "Id": "FlyArchOs-Abyss",
+        "License": "CC0-1.0",
+        "Name": "Abyss"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

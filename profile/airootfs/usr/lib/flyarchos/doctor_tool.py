@@ -85,7 +85,7 @@ def check_disk() -> None:
     gib = 1024 ** 3
     text = f"корень: занято {usage.used // gib} из {usage.total // gib} ГБ ({percent}%)"
     if percent >= 95:
-        warn(text, "критично мало места: flyarchos-info, ncdu /, очистка кэша: sudo pacman -Sc")
+        warn(text, "критично мало места: flyarchos-clean --apply, ncdu /")
     elif percent >= 85:
         warn(text, "места маловато")
     else:

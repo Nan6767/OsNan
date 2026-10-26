@@ -17,6 +17,9 @@ if [ "${1:-}" = "--keys" ]; then
   SUPER+W            случайные обои
   SUPER+Shift+W      следующая тема оформления (flyarchos-theme)
   SUPER+P            скриншот области в буфер обмена
+  SUPER+Shift+P      скриншот области в файл ~/Pictures/Screenshots
+  SUPER+Shift+V      история буфера обмена (cliphist)
+  SUPER+N            ночной режим (тёплый экран, hyprsunset)
   SUPER+L            блокировка экрана
   SUPER+Q            закрыть окно        SUPER+Shift+Q  выход из Hyprland
   SUPER+F            полный экран        SUPER+V        плавающее окно
@@ -67,6 +70,8 @@ cat <<'EOF'
   flyarchos-doctor           диагностика: службы, диск, пакеты, сеть, звук
   flyarchos-theme list       пресеты оформления (обои + акцент + рамки)
   flyarchos-snapshot         снимки системы на btrfs (snapper)
+  flyarchos-backup           инкрементная копия домашнего каталога
+  flyarchos-clean            уборка: кэш пакетов, журнал, миниатюры
   flyarchos-info --keys      все горячие клавиши Hyprland
 EOF
 echo

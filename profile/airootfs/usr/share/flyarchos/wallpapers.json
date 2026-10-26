@@ -110,6 +110,24 @@
       "file": "/usr/share/backgrounds/flyarchos/12-mono-slate.jpg",
       "thumb": "/usr/share/backgrounds/flyarchos/thumbs/12-mono-slate.jpg",
       "size": "2560x1440"
+    },
+    {
+      "id": "13-ember-dunes",
+      "title": "Ember Dunes",
+      "title_ru": "Тлеющие дюны",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/13-ember-dunes.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/13-ember-dunes.jpg",
+      "size": "2560x1440"
+    },
+    {
+      "id": "14-abyss",
+      "title": "Abyss",
+      "title_ru": "Бездна",
+      "kind": "generated",
+      "file": "/usr/share/backgrounds/flyarchos/14-abyss.jpg",
+      "thumb": "/usr/share/backgrounds/flyarchos/thumbs/14-abyss.jpg",
+      "size": "2560x1440"
     }
   ]
 }

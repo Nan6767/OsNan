@@ -36,6 +36,8 @@ profile_tool = load_module("flyarchos_profile_tool", PROFILE_TOOL)
 gen_packages = load_module("gen_packages", GEN_PACKAGES)
 theme_tool = load_module("flyarchos_theme_tool",
                          REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "theme_tool.py")
+backup_tool = load_module("flyarchos_backup_tool",
+                          REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "backup_tool.py")
 
 
 class NormalizeTest(unittest.TestCase):
@@ -237,6 +239,47 @@ class ThemePresetsTest(unittest.TestCase):
                             f"пресет {name}: нет обоев {wallpaper}")
             self.assertEqual(len(theme_tool.hex_to_rgb(accent)), 3)
             self.assertEqual(len(theme_tool.hex_to_rgb(accent2)), 3)
+
+
+class BackupToolTest(unittest.TestCase):
+    """Резервное копирование без rsync (запасной копировщик) на временном доме."""
+
+    def _make_home(self, tmp: str) -> Path:
+        home = Path(tmp) / "home"
+        (home / "docs").mkdir(parents=True)
+        (home / "docs" / "a.txt").write_text("hello", encoding="utf-8")
+        (home / ".cache" / "junk").mkdir(parents=True)
+        (home / ".cache" / "junk" / "x.bin").write_text("x" * 64, encoding="utf-8")
+        return home
+
+    def test_create_excludes_cache_and_dest_itself(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = self._make_home(tmp)
+            dest = home / "FlyArchOs-Backups"  # внутри дома — не должно быть рекурсии
+            snap = backup_tool.create_snapshot(home, dest, keep=5, rsync_path="")
+            self.assertEqual((snap / "docs" / "a.txt").read_text(encoding="utf-8"), "hello")
+            self.assertFalse((snap / ".cache").exists())
+            self.assertFalse((snap / "FlyArchOs-Backups").exists())
+            self.assertTrue((dest / "latest").is_symlink())
+
+    def test_prune_and_restore(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = self._make_home(tmp)
+            dest = Path(tmp) / "ext"
+            backup_tool.create_snapshot(home, dest, keep=5, rsync_path="")
+            (home / "docs" / "a.txt").write_text("changed", encoding="utf-8")
+            last = backup_tool.create_snapshot(home, dest, keep=1, rsync_path="")
+            self.assertEqual(backup_tool.list_snapshots(dest), [last])
+
+            target = Path(tmp) / "home2"
+            target.mkdir()
+            backup_tool.restore_snapshot(dest, last, target, rsync_path="")
+            self.assertEqual((target / "docs" / "a.txt").read_text(encoding="utf-8"), "changed")
+            self.assertFalse((target / backup_tool.MANIFEST).exists())
 
 
 if __name__ == "__main__":

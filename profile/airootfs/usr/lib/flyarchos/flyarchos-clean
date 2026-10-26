@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# flyarchos-clean — аккуратная уборка системы.
+#
+#   flyarchos-clean           показать, сколько можно освободить (без удалений)
+#   flyarchos-clean --apply   почистить: кэш pacman (оставить 3 версии),
+#                             журнал старше 14 дней, кэши миниатюр и шейдеров,
+#                             неиспользуемые flatpak-рантаймы
+#
+# Пакеты-сироты НЕ удаляются автоматически — только показываются:
+# их список лучше один раз посмотреть глазами.
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+C_CYAN=$'\033[36m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
+log() { printf '%s==>%s %s\n' "$C_CYAN" "$C_OFF" "$*"; }
+
+APPLY=0
+SYSTEM_ONLY=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --apply) APPLY=1 ;;
+        --system-only) SYSTEM_ONLY=1 ;;
+        -h|--help) sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "неизвестный аргумент: $1" >&2; exit 2 ;;
+    esac
+    shift
+done
+
+size_of() { du -sh "$1" 2>/dev/null | awk '{print $1}'; }
+
+# --- системная часть (root) -------------------------------------------------
+if [ "$SYSTEM_ONLY" = "1" ]; then
+    if command -v paccache >/dev/null 2>&1; then
+        log "Кэш пакетов: оставляю по 3 версии, остальное удаляю"
+        paccache -r
+        paccache -ruk0
+    else
+        pacman -Sc --noconfirm
+    fi
+    log "Журнал systemd: оставляю 14 дней"
+    journalctl --vacuum-time=14d >/dev/null 2>&1 || true
+    exit 0
+fi
+
+# --- отчёт ------------------------------------------------------------------
+log "Кэш пакетов:      $(size_of /var/cache/pacman/pkg) в /var/cache/pacman/pkg"
+echo "  Журнал systemd:   $(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]?B' | head -1)"
+echo "  Кэш пользователя: $(size_of "$HOME/.cache") в ~/.cache"
+echo "  Миниатюры:        $(size_of "$HOME/.cache/thumbnails")"
+orphans="$(pacman -Qdtq 2>/dev/null | wc -l)"
+echo "  Пакетов-сирот:    $orphans (список: pacman -Qdtq)"
+
+if [ "$APPLY" != "1" ]; then
+    echo
+    echo "Это был только отчёт. Почистить: ${C_CYAN}flyarchos-clean --apply${C_OFF}"
+    exit 0
+fi
+
+# --- уборка ------------------------------------------------------------------
+log "Чищу кэши пользователя"
+rm -rf "$HOME/.cache/thumbnails" "$HOME/.cache/mesa_shader_cache" 2>/dev/null || true
+fc-cache -f >/dev/null 2>&1 || true
+
+if command -v flatpak >/dev/null 2>&1; then
+    log "Flatpak: удаляю неиспользуемые рантаймы"
+    flatpak uninstall --unused -y || true
+fi
+
+log "Системная часть (нужен sudo)"
+sudo "$0" --system-only
+
+log "Свободно на корне: $(df -h / | awk 'NR==2 {print $4" из "$2}')"
+log "Готово"
