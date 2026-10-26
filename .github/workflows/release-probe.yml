@@ -1,8 +1,9 @@
 name: Release probe
 
-# Вспомогательный запуск: проверяет, может ли GITHUB_TOKEN создавать релизы.
+# Вспомогательный запуск: проверяет, может ли GITHUB_TOKEN создавать релизы
+# и загружать крупные файлы (у релиза GitHub лимит 2 ГБ на файл).
 # Нужен потому, что логи Actions недоступны извне, а шаг публикации ISO
-# в iso.yml завершается «успехом» даже при ошибке (continue-on-error).
+# в iso.yml может «успешно» завершиться и без релиза.
 #
 # Запуск: допишите любую строку в RELEASE_PROBE.txt и запушьте.
 on:
@@ -27,8 +28,30 @@ jobs:
           tag="probe-${{ github.run_number }}"
           if gh release create "$tag" --title "probe" --notes "probe" probe.txt > probe.log 2>&1; then
             echo "::error::PROBE_OK=релиз $tag создан"
-            gh release delete "$tag" --yes >/dev/null 2>&1 || true
-            git push origin ":refs/tags/$tag" >/dev/null 2>&1 || true
           else
             echo "::error::PROBE_FAIL=$(tail -5 probe.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)"
           fi
+
+      - name: Проба загрузки крупного файла (1.5 ГБ)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="probe-${{ github.run_number }}"
+          head -c 1500M /dev/urandom > big.bin
+          split -b 1500M -d -a 2 big.bin big.bin.part
+          ls -lh big.bin.part*
+          start=$(date +%s)
+          if gh release upload "$tag" big.bin.part00 --clobber > upload.log 2>&1; then
+            echo "::error::UPLOAD_OK_1500MB=$(( $(date +%s) - start )) сек"
+          else
+            echo "::error::UPLOAD_FAIL_1500MB=$(tail -4 upload.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)"
+          fi
+
+      - name: Уборка
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "probe-${{ github.run_number }}" --yes >/dev/null 2>&1 || true
+          git push origin ":refs/tags/probe-${{ github.run_number }}" >/dev/null 2>&1 || true

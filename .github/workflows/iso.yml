@@ -165,7 +165,7 @@ jobs:
           parts=()
           if [ "$size" -gt "$limit" ]; then
             echo "ISO $((size/1048576)) МБ — режем на части по 1900 МБ (лимит GitHub: 2 ГБ на файл релиза)"
-            split -b 1900M -d -a 2 "$iso" "out/$base.part"
+            split -b 1500M -d -a 2 "$iso" "out/$base.part"
             parts=(out/"$base".part*)
             { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл)."
               echo
