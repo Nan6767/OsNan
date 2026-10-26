@@ -11,6 +11,8 @@
     flyarchos-backup list                  # список копий
     flyarchos-backup restore [имя]         # восстановить (по умолчанию последнюю)
     flyarchos-backup prune --keep 3        # оставить только 3 последние
+    flyarchos-backup auto on               # ежедневный автобэкап (systemd-таймер)
+    flyarchos-backup auto off|status       # выключить / показать состояние
 
 Совет: храните копии на внешнем диске — копия в том же доме защищает
 от случайных удалений, но не от поломки диска.
@@ -185,7 +187,53 @@ def dir_size(path: Path) -> int:
     return total
 
 
+AUTO_SERVICE = "flyarchos-backup-auto.service"
+AUTO_TIMER = "flyarchos-backup-auto.timer"
+
+
+def auto_units() -> tuple[str, str]:
+    """Имена systemd-юнитов автобэкапа: (service, timer)."""
+    return AUTO_SERVICE, AUTO_TIMER
+
+
+def cmd_auto(mode: str) -> int:
+    """Включить/выключить ежедневный автобэкап (systemd --user таймер)."""
+    if mode not in ("on", "off", "status"):
+        print("flyarchos-backup auto: доступно on|off|status", file=sys.stderr)
+        return 2
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        print("systemctl не найден: автобэкап работает только в установленной FlyArchOs",
+              file=sys.stderr)
+        return 1
+    _, timer = auto_units()
+    base = [systemctl, "--user"]
+    if mode == "on":
+        rc = subprocess.call([*base, "enable", "--now", timer])
+        if rc == 0:
+            print("Автобэкап включён: копия дома раз в день (храним 7 последних).")
+            print("Куда: ~/FlyArchOs-Backups (или $FLYARCHOS_BACKUP_DIR). "
+                  "Статус: flyarchos-backup auto status")
+        return rc
+    if mode == "off":
+        rc = subprocess.call([*base, "disable", "--now", timer])
+        if rc == 0:
+            print("Автобэкап выключен. Ручная копия: flyarchos-backup")
+        return rc
+    enabled = subprocess.run([*base, "is-enabled", timer],
+                             capture_output=True, text=True).stdout.strip() or "?"
+    active = subprocess.run([*base, "is-active", timer],
+                            capture_output=True, text=True).stdout.strip() or "?"
+    state = "включён" if active == "active" else "выключен"
+    print(f"Автобэкап: {state} (enabled={enabled}, active={active})")
+    print("Включить: flyarchos-backup auto on · Выключить: flyarchos-backup auto off")
+    return 0
+
+
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "auto":
+        return cmd_auto(sys.argv[2] if len(sys.argv) > 2 else "status")
+
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("action", nargs="?", default="create",

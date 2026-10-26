@@ -1,0 +1,97 @@
+#!/bin/bash
+# flyarchos-aur — установка и обслуживание yay, помощника для AUR.
+#
+# AUR (Arch User Repository) — пользовательский репозиторий Arch Linux:
+# пакеты оттуда собираются из исходников прямо на вашей машине. FlyArchOs
+# не ставит AUR-помощники по умолчанию (ISO собирается офлайн), поэтому
+# yay ставится одной командой при наличии интернета:
+#
+#   flyarchos-aur            — статус: установлен ли yay
+#   flyarchos-aur install    — поставить yay-bin из AUR (спросит перед сборкой)
+#   flyarchos-aur install -y — поставить без вопросов
+#   flyarchos-aur update     — обновить систему, включая пакеты из AUR
+#
+# Дальше пользоваться как обычно:  yay <пакет>, yay -Syu, yay -R <пакет>.
+
+set -u
+
+ACTION="${1:-status}"
+ASSUME_YES=0
+[ "${2:-}" = "-y" ] || [ "${2:-}" = "--yes" ] && ASSUME_YES=1
+
+err() { echo "flyarchos-aur: $*" >&2; }
+
+status() {
+    if command -v yay >/dev/null 2>&1; then
+        echo "yay установлен: $(yay --version 2>/dev/null | head -n1)"
+        echo "Обновление системы с AUR:  flyarchos-aur update"
+    else
+        echo "yay не установлен."
+        echo "Поставить (нужен интернет): flyarchos-aur install"
+    fi
+}
+
+install_yay() {
+    if command -v yay >/dev/null 2>&1; then
+        echo "yay уже установлен: $(yay --version 2>/dev/null | head -n1)"
+        echo "Обновить пакеты AUR: flyarchos-aur update"
+        return 0
+    fi
+    if [ "$(id -u)" -eq 0 ]; then
+        err "не запускайте от root: makepkg собирает пакеты от обычного пользователя (sudo спросит сам)"
+        return 1
+    fi
+    if ! command -v git >/dev/null 2>&1 || ! command -v makepkg >/dev/null 2>&1; then
+        echo "Ставлю инструменты сборки (base-devel, git)…"
+        sudo pacman -S --needed --noconfirm base-devel git || return 1
+    fi
+
+    work="$(mktemp -d)"
+    # shellcheck disable=SC2064
+    trap "rm -rf '$work'" EXIT
+    echo "Клонирую yay-bin из AUR…"
+    if ! git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$work/yay-bin"; then
+        err "не удалось скачать из AUR — проверьте интернет"
+        return 1
+    fi
+    cd "$work/yay-bin" || return 1
+
+    if [ "$ASSUME_YES" -ne 1 ]; then
+        echo "Перед сборкой любого пакета из AUR стоит заглянуть в его PKGBUILD."
+        printf 'Показать PKGBUILD? [y/N] '
+        read -r ans || ans=""
+        case "$ans" in
+            y|Y|yes|Yes|д|Д) "${PAGER:-cat}" PKGBUILD ;;
+        esac
+        printf 'Собрать и установить yay-bin? [y/N] '
+        read -r ans || ans=""
+        case "$ans" in
+            y|Y|yes|Yes|д|Д) : ;;
+            *) echo "Отменено."; return 0 ;;
+        esac
+    fi
+
+    if makepkg -si --noconfirm; then
+        echo
+        echo "Готово! Дальше: yay <пакет> — установка из AUR, flyarchos-aur update — обновления."
+    else
+        err "сборка не удалась (лог makepkg выше)"
+        return 1
+    fi
+}
+
+case "$ACTION" in
+    status)  status ;;
+    install) install_yay ;;
+    update)
+        if command -v yay >/dev/null 2>&1; then
+            exec yay -Syu
+        fi
+        err "yay не установлен: flyarchos-aur install"
+        exit 1
+        ;;
+    *)
+        err "неизвестное действие: $ACTION (доступно: status, install, update)"
+        exit 2
+        ;;
+esac

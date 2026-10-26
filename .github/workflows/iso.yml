@@ -191,8 +191,13 @@ jobs:
             parts=("$iso")
           fi
           parts+=("$iso.sha256")
-          if gh release create "$tag" \
-              --title "FlyArchOs ISO — ${{ steps.cfg.outputs.profile }} (run ${{ github.run_number }}, $(date -u +%F))" \
+          # Бета-версии (имя файла содержит "beta") — pre-release:
+          # стабильная линия FlyArchOs остаётся на 1.0.0.
+          pre=()
+          title="FlyArchOs ISO — ${{ steps.cfg.outputs.profile }} (run ${{ github.run_number }}, $(date -u +%F))"
+          case "$base" in *beta*) pre=(--prerelease); title="$title — бета" ;; esac
+          if gh release create "$tag" "${pre[@]}" \
+              --title "$title" \
               --notes "Автоматическая сборка FlyArchOs: Arch Linux + Hyprland + KDE Plasma, установщик Calamares, несколько обоев.
 
           Профиль: **${{ steps.cfg.outputs.profile }}** ($((size/1048576)) МБ)

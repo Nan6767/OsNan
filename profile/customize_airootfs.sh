@@ -61,6 +61,7 @@ ln -sf /usr/lib/flyarchos/theme_tool.py /usr/bin/flyarchos-theme
 ln -sf /usr/lib/flyarchos/flyarchos-snapshot /usr/bin/flyarchos-snapshot
 ln -sf /usr/lib/flyarchos/backup_tool.py /usr/bin/flyarchos-backup
 ln -sf /usr/lib/flyarchos/flyarchos-clean /usr/bin/flyarchos-clean
+ln -sf /usr/lib/flyarchos/flyarchos-aur /usr/bin/flyarchos-aur
 
 echo "==> [7/9] Обои по умолчанию"
 install -d -m 755 /usr/share/backgrounds/flyarchos

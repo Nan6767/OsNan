@@ -71,6 +71,8 @@ cat <<'EOF'
   flyarchos-theme list       пресеты оформления (обои + акцент + рамки)
   flyarchos-snapshot         снимки системы на btrfs (snapper)
   flyarchos-backup           инкрементная копия домашнего каталога
+  flyarchos-backup auto      ежедневный автобэкап: auto on|off|status
+  flyarchos-aur              yay для AUR: install / update / статус
   flyarchos-clean            уборка: кэш пакетов, журнал, миниатюры
   flyarchos-info --keys      все горячие клавиши Hyprland
 EOF

@@ -282,5 +282,32 @@ class BackupToolTest(unittest.TestCase):
             self.assertFalse((target / backup_tool.MANIFEST).exists())
 
 
+class BackupAutoTest(unittest.TestCase):
+    """Автобэкап: имена юнитов совпадают с файлами в образе, мусорный режим — код 2."""
+
+    def test_units_match_shipped_files(self):
+        service, timer = backup_tool.auto_units()
+        base = REPO / "profile" / "airootfs" / "usr" / "lib" / "systemd" / "user"
+        self.assertTrue((base / service).is_file(), service)
+        self.assertTrue((base / timer).is_file(), timer)
+
+    def test_auto_bogus_mode_returns_2(self):
+        self.assertEqual(backup_tool.cmd_auto("bogus"), 2)
+
+
+class VersionTest(unittest.TestCase):
+    """Бета-версия должна быть одинаковой в profiledef, os-release и файле версии."""
+
+    def test_beta_version_everywhere(self):
+        profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
+        self.assertIn('iso_version="1.3.0-beta"', profiledef)
+        osrel = (REPO / "profile" / "airootfs" / "usr" / "lib" / "os-release").read_text(encoding="utf-8")
+        self.assertIn("VERSION_ID=1.3.0-beta", osrel)
+        self.assertIn('PRETTY_NAME="FlyArchOs 1.3.0-beta"', osrel)
+        version = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "version").read_text(
+            encoding="utf-8").strip()
+        self.assertEqual(version, "1.3.0-beta")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

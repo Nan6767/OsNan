@@ -420,6 +420,7 @@ def check_installer_scripts(report: Report) -> None:
         "theme_tool.py",
         "backup_tool.py",
         "flyarchos-clean",
+        "flyarchos-aur",
     ]
     missing = []
     non_exec = []

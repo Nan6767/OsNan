@@ -266,7 +266,12 @@ def gui_mode() -> int:
     backup_btn.clicked.connect(lambda: run_visible(hold("flyarchos-backup")))
     clean_btn = QPushButton("Уборка")
     clean_btn.clicked.connect(lambda: run_visible(hold("flyarchos-clean")))
-    for btn in (doctor_btn, theme_btn, snap_btn, backup_btn, clean_btn):
+    aur_btn = QPushButton("AUR (yay)")
+    aur_btn.clicked.connect(lambda: run_visible(hold("flyarchos-aur install")))
+    autobak_btn = QPushButton("Автобэкап")
+    autobak_btn.clicked.connect(lambda: run_visible(hold("flyarchos-backup auto status")))
+    for btn in (doctor_btn, theme_btn, snap_btn, backup_btn, clean_btn,
+                aur_btn, autobak_btn):
         tools.addWidget(btn)
     tools.addStretch(1)
     layout.addLayout(tools)

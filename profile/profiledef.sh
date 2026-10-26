@@ -9,7 +9,7 @@ iso_name="flyarchos"
 iso_label="FLYARCHOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="FlyArchOs <https://github.com/Nan6767/OsNan>"
 iso_application="FlyArchOs Linux - Arch-based live/installable ISO (Hyprland + KDE Plasma)"
-iso_version="1.2.0"
+iso_version="1.3.0-beta"
 install_dir="arch"
 buildmodes=('iso')
 # Режимы загрузки берутся от releng-профиля archiso:
@@ -42,6 +42,7 @@ file_permissions=(
     ["/usr/bin/flyarchos-snapshot"]="0:0:755"
     ["/usr/bin/flyarchos-backup"]="0:0:755"
     ["/usr/bin/flyarchos-clean"]="0:0:755"
+    ["/usr/bin/flyarchos-aur"]="0:0:755"
     ["/usr/lib/flyarchos/profile_tool.py"]="0:0:755"
     ["/usr/lib/flyarchos/wallpapers.py"]="0:0:755"
     ["/usr/lib/flyarchos/wallpaper_tool.py"]="0:0:755"
@@ -50,4 +51,5 @@ file_permissions=(
     ["/usr/lib/flyarchos/install-finalize.sh"]="0:0:755"
     ["/usr/lib/flyarchos/backup_tool.py"]="0:0:755"
     ["/usr/lib/flyarchos/flyarchos-clean"]="0:0:755"
+    ["/usr/lib/flyarchos/flyarchos-aur"]="0:0:755"
 )

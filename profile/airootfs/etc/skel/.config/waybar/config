@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/updates", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
+    "modules-right": ["custom/updates", "custom/clipboard", "custom/nightlight", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -66,6 +66,18 @@
         "hide-if-empty": true,
         "tooltip": false,
         "on-click": "kitty -e flyarchos-update"
+    },
+    "custom/clipboard": {
+        "format": "",
+        "tooltip": true,
+        "tooltip-format": "История буфера обмена (Super+Shift+V)",
+        "on-click": "cliphist list | wofi --dmenu --prompt Буфер: | cliphist decode | wl-copy"
+    },
+    "custom/nightlight": {
+        "format": "",
+        "tooltip": true,
+        "tooltip-format": "Ночной режим — тёплый экран (Super+N)",
+        "on-click": "pkill hyprsunset || hyprsunset -t 4200"
     },
     "tray": {
         "icon-size": 18,
