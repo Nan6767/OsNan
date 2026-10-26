@@ -26,10 +26,10 @@ xf86-video-amdgpu
 xf86-video-ati
 
 # NVIDIA. С декабря 2025 Arch заменил «nvidia» на «nvidia-open» (модули ядра
-# NVIDIA с открытым кодом); для ядра linux-lts — nvidia-lts-open.
+# NVIDIA с открытым кодом); для ядра linux-lts — nvidia-open-lts.
 # На машинах без NVIDIA эти пакеты просто не используются.
 nvidia-open
-nvidia-lts-open
+nvidia-open-lts
 nvidia-utils
 nvidia-settings
 lib32-nvidia-utils

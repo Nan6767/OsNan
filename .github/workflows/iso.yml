@@ -112,6 +112,10 @@ jobs:
           git add logs
           if ! git diff --cached --quiet; then
             git commit -m "Лог сборки ISO (run ${{ github.run_number }})"
+            # Ветка могла уйти вперёд, пока шла сборка, — перебазируемся,
+            # иначе push отклоняется как не fast-forward и лог теряется.
+            git fetch origin "$BRANCH" || true
+            git rebase "origin/$BRANCH" || git rebase --abort
             git push origin "HEAD:${BRANCH}" || echo "не удалось запушить лог"
           else
             echo "лог пуст — коммитить нечего"
@@ -189,6 +193,7 @@ jobs:
           Контрольная сумма: \`$sum\`" \
               "${parts[@]}" > release.log 2>&1; then
             echo "Релиз $tag опубликован"
+            echo "::error::RELEASE_OK=$tag частей=${#parts[@]}"
             tail -3 release.log
           else
             # Без `| tee`: иначе статусом команды становится статус tee и
