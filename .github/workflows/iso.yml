@@ -99,6 +99,7 @@ jobs:
       # в репозиторий — так сборку удобно отлаживать.
       - name: Сохранить лог сборки в репозиторий
         if: always()
+        continue-on-error: true
         env:
           BRANCH: ${{ github.ref_name }}
         run: |
@@ -109,6 +110,7 @@ jobs:
             cat build.log 2>/dev/null || echo "(лог пуст)"; } > "logs/iso-run-${{ github.run_number }}.log"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git restore . 2>/dev/null || git checkout -- . 2>/dev/null || true
           git checkout -B "logs-run-${{ github.run_number }}"
           git add logs
           if ! git diff --cached --quiet; then
@@ -116,14 +118,14 @@ jobs:
             # Ветка могла уйти вперёд, пока шла сборка, — перебазируемся,
             # иначе push отклоняется как не fast-forward и лог теряется.
             git fetch origin "$BRANCH" || true
-            git rebase "origin/$BRANCH" || git rebase --abort
+            git rebase FETCH_HEAD || git rebase --abort || true
             git push origin "HEAD:${BRANCH}" || echo "не удалось запушить лог"
           else
             echo "лог пуст — коммитить нечего"
           fi
 
       - name: Артефакты
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.upload }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.upload) }}
         uses: actions/upload-artifact@v4
         with:
           name: flyarchos-${{ steps.cfg.outputs.profile }}-iso-${{ github.run_number }}
@@ -155,7 +157,7 @@ jobs:
           fi
 
       - name: Публикация ISO в релиз GitHub
-        if: ${{ success() }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

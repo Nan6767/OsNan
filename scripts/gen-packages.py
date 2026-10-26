@@ -122,6 +122,15 @@ MINI_EXCLUDE: list[str] = [
     # графический центр обновлений заменяет flyarchos-update
     "discover", "packagekit", "packagekit-qt6",
     "elisa", "kdeconnect", "kinfocenter",
+    # Qt5-стек: вся система (Plasma, SDDM, Calamares, KeePassXC) уже на Qt6
+    "qt5-wayland", "qt5ct",
+    # просмотрщики Plasma (PDF и картинки откроет Firefox)
+    "okular", "gwenview", "kwrite", "kfind",
+    # печать/сканирование и GUI-разметка ставятся потом одной командой;
+    # разбивку диска в live делает сам Calamares
+    "system-config-printer", "sane", "simple-scan", "gparted",
+    # второй установщик и второй редактор в mini не нужны
+    "archinstall", "neovim", "bind", "ttf-dejavu",
 ]
 
 PROFILES: dict[str, dict[str, list[str]]] = {

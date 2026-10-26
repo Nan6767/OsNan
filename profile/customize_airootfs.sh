@@ -75,6 +75,7 @@ rm -f /var/lib/systemd/random-seed || true
 # пакеты при этом не трогаем, pacman о файлах не узнает и не сломается.
 if [ "$(cat /usr/share/flyarchos/profile-variant 2>/dev/null)" = "mini" ]; then
     echo "==> [mini] Урезание документации и локалей"
+    rm -f /boot/initramfs-*-fallback.img 2>/dev/null || true
     rm -rf /usr/share/doc /usr/share/gtk-doc /usr/share/info /usr/share/man 2>/dev/null || true
     for d in /usr/share/locale/*/; do
         case "$(basename "$d")" in

@@ -185,6 +185,19 @@ text = re.sub(r"^[ \t]*- packagechooser@extras\n", "", text, flags=re.M)
 open(path, "w", encoding="utf-8").write(text)
 PY
     echo "$PROFILE_NAME" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"
+    if [ "$PROFILE_NAME" = "mini" ]; then
+        # xz жмёт плотнее zstd — mini должен влезть в лимит GitHub 2 GiB
+        log "Профиль mini: сжатие squashfs через xz (максимум)"
+        python3 - "$WORK/profile/profiledef.sh" <<'PYEOF'
+import re, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+text = re.sub(r"airootfs_image_tool_options=\([^)]*\)",
+"airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '100%' '-noappend')",
+text, count=1)
+open(path, "w", encoding="utf-8").write(text)
+PYEOF
+    fi
 fi
 
 # --- 8. проверка дерева ----------------------------------------------------
