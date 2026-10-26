@@ -122,6 +122,9 @@ MINI_EXCLUDE: list[str] = [
     # графический центр обновлений заменяет flyarchos-update
     "discover", "packagekit", "packagekit-qt6",
     "elisa", "kdeconnect", "kinfocenter",
+    # Метапакет Plasma тянет Discover, DrKonqi+gdb, QtWebEngine и пр.;
+    # ядро оболочки в 30-plasma.txt перечислено явно, без него обойдёмся
+    "plasma-meta",
     # Qt5-стек: вся система (Plasma, SDDM, Calamares, KeePassXC) уже на Qt6
     "qt5-wayland", "qt5ct",
     # просмотрщики Plasma (PDF и картинки откроет Firefox)

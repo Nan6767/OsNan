@@ -214,7 +214,7 @@ class ProfilesTest(unittest.TestCase):
 
     def test_mini_keeps_essentials(self):
         # mini-образ обязан оставаться полноценной системой с обоими DE
-        essentials = {"linux", "hyprland", "plasma-meta", "sddm", "firefox",
+        essentials = {"linux", "hyprland", "plasma-desktop", "kwin", "sddm", "firefox",
                       "networkmanager", "grub", "snapper", "kitty", "dolphin"}
         self.assertFalse(essentials & set(gen_packages.MINI_EXCLUDE))
         self.assertTrue(essentials <= self.all_packages())

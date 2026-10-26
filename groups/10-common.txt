@@ -50,6 +50,7 @@ tumbler
 # Мелочи рабочего стола
 playerctl
 brightnessctl
+polkit-kde-agent
 gnome-keyring
 libsecret
 seahorse

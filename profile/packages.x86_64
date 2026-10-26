@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 302
+# Всего пакетов: 314
 # Профиль:  (группы: )
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -129,7 +129,7 @@ python-pip
 nodejs
 npm
 
-# --- common (10-common.txt): 40 шт. --------------------
+# --- common (10-common.txt): 41 шт. --------------------
 xorg-xwayland
 xorg-xrandr
 qt5-wayland
@@ -167,6 +167,7 @@ ffmpegthumbs
 tumbler
 playerctl
 brightnessctl
+polkit-kde-agent
 gnome-keyring
 libsecret
 seahorse
@@ -187,8 +188,19 @@ thunar-archive-plugin
 thunar-volman
 xarchiver
 
-# --- plasma (30-plasma.txt): 37 шт. --------------------
+# --- plasma (30-plasma.txt): 48 шт. --------------------
 plasma-meta
+plasma-desktop
+plasma-workspace
+kwin
+kscreenlocker
+plasma-integration
+aurorae
+milou
+kactivitymanagerd
+kde-gtk-config
+plasma-browser-integration
+baloo
 plasma-workspace-wallpapers
 plasma-nm
 plasma-pa
