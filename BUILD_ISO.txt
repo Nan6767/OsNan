@@ -37,3 +37,4 @@ profile=mini
 trigger: 1.2.0 mini
 trigger: 1.3.0-beta mini
 trigger: 1.3.0-beta mini (os-release fix)
+trigger: 1.4.0-beta mini
