@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=FlyArchOs Update
+Name[ru]=Обновление FlyArchOs
+Comment=Update the system (pacman + Flatpak)
+Comment[ru]=Обновить систему (pacman + Flatpak, со снимком btrfs)
+Exec=flyarchos-update
+Icon=system-software-update
+Terminal=true
+Categories=System;PackageManager;
+Keywords=update;pacman;обновление;

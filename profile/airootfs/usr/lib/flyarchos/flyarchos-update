@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# flyarchos-update — безопасное обновление системы одной командой.
+#
+#   flyarchos-update              pacman -Syu (+ flatpak, если установлен)
+#   flyarchos-update --mirrors    сначала обновить список зеркал (reflector)
+#   flyarchos-update --yes        без вопросов (pacman --noconfirm)
+#   flyarchos-update --no-flatpak пропустить flatpak
+#
+# Если настроен snapper (конфигурация root на btrfs), вокруг обновления
+# автоматически создаётся пара снимков pre/post — откат через
+# flyarchos-snapshot.
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+C_CYAN=$'\033[36m'; C_YEL=$'\033[33m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
+log()  { printf '%s==>%s %s\n' "$C_CYAN" "$C_OFF" "$*"; }
+warn() { printf '%s==> ВНИМАНИЕ:%s %s\n' "$C_YEL" "$C_OFF" "$*" >&2; }
+
+MIRRORS=0
+YES=0
+FLATPAK=1
+SYSTEM_ONLY=0
+
+usage() { sed -n '3,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --mirrors)    MIRRORS=1 ;;
+        --yes|-y)     YES=1 ;;
+        --no-flatpak) FLATPAK=0 ;;
+        --system-only) SYSTEM_ONLY=1 ;;   # внутренний режим (под sudo)
+        -h|--help)    usage; exit 0 ;;
+        *) warn "неизвестный аргумент: $1"; usage; exit 2 ;;
+    esac
+    shift
+done
+
+# --- пользовательская часть: переходим под sudo и потом возвращаемся -------
+if [ "$(id -u)" -ne 0 ]; then
+    args=(--system-only)
+    [ "$MIRRORS" = "1" ] && args+=(--mirrors)
+    [ "$YES" = "1" ] && args+=(--yes)
+    sudo "$0" "${args[@]}" || exit $?
+
+    if [ "$FLATPAK" = "1" ] && command -v flatpak >/dev/null 2>&1; then
+        log "Обновление Flatpak"
+        if [ "$YES" = "1" ]; then flatpak update -y; else flatpak update; fi
+    fi
+
+    running="$(uname -r)"
+    if [ ! -d "/usr/lib/modules/$running" ]; then
+        warn "ядро обновилось — рекомендуется перезагрузка"
+    fi
+    log "Готово"
+    exit 0
+fi
+
+# --- системная часть (root) -------------------------------------------------
+if [ "$MIRRORS" = "1" ] && command -v reflector >/dev/null 2>&1; then
+    log "Обновление зеркал (reflector)"
+    [ -f /etc/pacman.d/mirrorlist.bak-flyarchos ] || \
+        cp -a /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bak-flyarchos
+    reflector --country 'Russia,Germany,Finland,Netherlands' --latest 20 \
+        --protocol https --sort rate --save /etc/pacman.d/mirrorlist \
+        || warn "reflector не сработал — остаёмся на текущих зеркалах"
+fi
+
+pre_num=""
+if command -v snapper >/dev/null 2>&1 && snapper -c root get-config >/dev/null 2>&1; then
+    pre_num="$(snapper -c root create --type pre --print-number \
+        --description 'перед flyarchos-update' 2>/dev/null || true)"
+    [ -n "$pre_num" ] && log "Снимок перед обновлением: #$pre_num"
+fi
+
+log "Обновление системы (pacman -Syu)"
+pacman_args=(-Syu)
+[ "$YES" = "1" ] && pacman_args+=(--noconfirm)
+pacman "${pacman_args[@]}"
+rc=$?
+
+if [ -n "$pre_num" ]; then
+    snapper -c root create --type post --pre-number "$pre_num" \
+        --description 'после flyarchos-update' >/dev/null 2>&1 || true
+fi
+[ "$rc" -eq 0 ] || exit "$rc"
+
+orphans="$(pacman -Qdtq 2>/dev/null | wc -l)"
+if [ "$orphans" -gt 0 ]; then
+    echo "  ${C_DIM}пакетов-сирот: $orphans (посмотреть: pacman -Qdtq)${C_OFF}"
+fi
+pacnew="$(find /etc -name '*.pacnew' -print -quit 2>/dev/null)"
+if [ -n "$pacnew" ]; then
+    warn "есть файлы .pacnew — проверьте конфиги командой pacdiff"
+fi
+exit 0

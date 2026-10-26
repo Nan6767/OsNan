@@ -44,6 +44,9 @@ aur:
 iso:
 	./scripts/build-iso.sh
 
+iso-mini:
+	./scripts/build-iso.sh --profile mini
+
 all: check test packages iso
 
 clean:

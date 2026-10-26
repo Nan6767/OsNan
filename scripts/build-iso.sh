@@ -25,7 +25,6 @@ CLEAN=0
 ONLY_CHECK=0
 VERBOSE="-v"
 PROFILE_NAME="full"
-SLIM_GROUPS="core,common,hyprland,plasma,apps,live"
 
 log()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m==> ПРЕДУПРЕЖДЕНИЕ:\033[0m %s\n' "$*" >&2; }
@@ -91,11 +90,13 @@ if [ -n "${AUR_ONLY:-}" ]; then
 fi
 
 # --- 3. список пакетов -----------------------------------------------------
+case "$PROFILE_NAME" in
+    full|slim|mini) ;;
+    *) die "неизвестный профиль: $PROFILE_NAME (доступны full, slim, mini)" ;;
+esac
 log "Генерация списка пакетов из groups/ (профиль: $PROFILE_NAME)"
-GEN_ARGS=()
-if [ "$PROFILE_NAME" = "slim" ]; then
-    GEN_ARGS=(--only-groups "$SLIM_GROUPS")
-fi
+# Состав профилей описан в scripts/gen-packages.py (PROFILES) — единое место.
+GEN_ARGS=(--profile "$PROFILE_NAME")
 if [ -n "${EXCLUDE_PKGS:-}" ]; then
     GEN_ARGS+=(--exclude "$EXCLUDE_PKGS")
 fi
@@ -173,9 +174,9 @@ PY
     fi
 fi
 
-# --- 7b. slim: скрываем в установщике наборы, которых нет в образе --------
-if [ "$PROFILE_NAME" = "slim" ]; then
-    log "Профиль slim: убираем страницу «Наборы ПО» из установщика"
+# --- 7b. slim/mini: скрываем в установщике наборы, которых нет в образе ---
+if [ "$PROFILE_NAME" = "slim" ] || [ "$PROFILE_NAME" = "mini" ]; then
+    log "Профиль $PROFILE_NAME: убираем страницу «Наборы ПО» из установщика"
     python3 - "$WORK/profile/airootfs/etc/calamares/settings.conf" <<'PY'
 import re, sys
 path = sys.argv[1]
@@ -183,7 +184,7 @@ text = open(path, encoding="utf-8").read()
 text = re.sub(r"^[ \t]*- packagechooser@extras\n", "", text, flags=re.M)
 open(path, "w", encoding="utf-8").write(text)
 PY
-    echo "slim" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"
+    echo "$PROFILE_NAME" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"
 fi
 
 # --- 8. проверка дерева ----------------------------------------------------

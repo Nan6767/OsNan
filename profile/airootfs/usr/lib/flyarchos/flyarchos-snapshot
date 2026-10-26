@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# flyarchos-snapshot — снимки системы на btrfs через snapper, по-человечески.
+#
+#   flyarchos-snapshot                 список снимков
+#   flyarchos-snapshot create [текст]  создать снимок с описанием
+#   flyarchos-snapshot delete <номер>  удалить снимок
+#   flyarchos-snapshot rollback <номер>  откатиться (нужна перезагрузка)
+#   flyarchos-snapshot setup           первичная настройка snapper
+#
+# Работает, только если корень стоит на btrfs (в установщике FlyArchOs
+# это выбор по умолчанию).
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+C_CYAN=$'\033[36m'; C_RED=$'\033[31m'; C_OFF=$'\033[0m'
+log() { printf '%s==>%s %s\n' "$C_CYAN" "$C_OFF" "$*"; }
+die() { printf '%s==> ОШИБКА:%s %s\n' "$C_RED" "$C_OFF" "$*" >&2; exit 1; }
+
+usage() { sed -n '3,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+need_root() {
+    [ "$(id -u)" -eq 0 ] && return 0
+    exec sudo "$0" "$@"
+}
+
+configured() {
+    command -v snapper >/dev/null 2>&1 && snapper -c root get-config >/dev/null 2>&1
+}
+
+cmd="${1:-list}"
+shift || true
+
+case "$cmd" in -h|--help|help) usage; exit 0 ;; esac
+command -v snapper >/dev/null 2>&1 || die "snapper не установлен: sudo pacman -S snapper"
+
+case "$cmd" in
+    list|ls)
+        configured || die "snapper не настроен — выполните: flyarchos-snapshot setup"
+        snapper -c root list
+        ;;
+    create|new)
+        need_root create "$@"
+        configured || die "snapper не настроен — выполните: flyarchos-snapshot setup"
+        num="$(snapper -c root create --print-number \
+            --description "${*:-ручной снимок FlyArchOs}")"
+        log "Создан снимок #$num"
+        ;;
+    delete|rm)
+        [ -n "${1:-}" ] || { usage; exit 2; }
+        need_root delete "$@"
+        snapper -c root delete "$1" && log "Снимок #$1 удалён"
+        ;;
+    rollback)
+        [ -n "${1:-}" ] || { usage; exit 2; }
+        need_root rollback "$@"
+        printf 'Откатиться на снимок #%s? Текущее состояние сохранится отдельным снимком. [y/N] ' "$1"
+        read -r ans
+        case "$ans" in
+            y|Y|yes|да) snapper -c root rollback "$1" && log "Готово — перезагрузитесь" ;;
+            *) log "Отменено" ;;
+        esac
+        ;;
+    setup)
+        need_root setup
+        [ "$(findmnt -n -o FSTYPE / 2>/dev/null)" = "btrfs" ] || \
+            die "корень не на btrfs — снимки недоступны (у вас другая ФС, это нормально)"
+        if configured; then
+            log "snapper уже настроен"
+        else
+            log "Создаю конфигурацию snapper для /"
+            if ! snapper -c root create-config /; then
+                cat >&2 <<'EOF'
+Не получилось автоматически: подтом /.snapshots, скорее всего, уже создан
+установщиком. Шаги с ArchWiki вручную:
+
+  sudo umount /.snapshots
+  sudo rm -r /.snapshots
+  sudo snapper -c root create-config /
+  sudo btrfs subvolume delete /.snapshots
+  sudo mkdir /.snapshots
+  sudo mount -a
+  sudo chmod 750 /.snapshots
+EOF
+                exit 1
+            fi
+        fi
+        systemctl enable --now snapper-timeline.timer snapper-cleanup.timer 2>/dev/null || true
+        log "Готово: ежечасные снимки и автоочистка включены"
+        ;;
+    -h|--help|help) usage ;;
+    *) usage; exit 2 ;;
+esac

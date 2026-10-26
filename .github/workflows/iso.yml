@@ -20,6 +20,7 @@ on:
         options:
           - slim
           - full
+          - mini
         default: slim
       aur:
         description: "Добавить AUR-пакеты (groups/aur.txt)"
@@ -44,7 +45,7 @@ jobs:
       - name: Профиль сборки
         id: cfg
         run: |
-          profile=$(grep -oE 'profile=(slim|full)' BUILD_ISO.txt | head -1 | cut -d= -f2)
+          profile=$(grep -oE 'profile=(slim|full|mini)' BUILD_ISO.txt | head -1 | cut -d= -f2)
           echo "profile=${profile:-slim}" >> "$GITHUB_OUTPUT"
           echo "Профиль: ${profile:-slim}"
 
@@ -165,10 +166,10 @@ jobs:
           tag="iso-${{ github.run_number }}-${{ steps.cfg.outputs.profile }}"
           size=$(stat -c %s "$iso")
           sum=$(cut -d' ' -f1 < "$iso.sha256")
-          limit=$((1900 * 1024 * 1024))
+          limit=$((2000 * 1024 * 1024))
           parts=()
           if [ "$size" -gt "$limit" ]; then
-            echo "ISO $((size/1048576)) МБ — режем на части по 1900 МБ (лимит GitHub: 2 ГБ на файл релиза)"
+            echo "ISO $((size/1048576)) МБ — режем на части по 1500 МБ (лимит GitHub: 2 ГБ на файл релиза)"
             split -b 1500M -d -a 2 "$iso" "out/$base.part"
             parts=(out/"$base".part*)
             { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл)."

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=FlyArchOs Doctor
+Name[ru]=Диагностика FlyArchOs
+Comment=Check services, disk, packages, network and audio
+Comment[ru]=Проверить службы, диск, пакеты, сеть и звук
+Exec=flyarchos-doctor
+Icon=utilities-system-monitor
+Terminal=true
+Categories=System;Monitor;
+Keywords=doctor;diagnostics;диагностика;проблемы;
