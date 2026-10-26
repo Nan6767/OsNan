@@ -1,0 +1,34 @@
+name: Release probe
+
+# Вспомогательный запуск: проверяет, может ли GITHUB_TOKEN создавать релизы.
+# Нужен потому, что логи Actions недоступны извне, а шаг публикации ISO
+# в iso.yml завершается «успехом» даже при ошибке (continue-on-error).
+#
+# Запуск: допишите любую строку в RELEASE_PROBE.txt и запушьте.
+on:
+  push:
+    paths:
+      - "RELEASE_PROBE.txt"
+
+jobs:
+  probe:
+    name: probe
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Проба создания релиза
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "probe $(date -u +%FT%TZ)" > probe.txt
+          tag="probe-${{ github.run_number }}"
+          if gh release create "$tag" --title "probe" --notes "probe" probe.txt > probe.log 2>&1; then
+            echo "::error::PROBE_OK=релиз $tag создан"
+            gh release delete "$tag" --yes >/dev/null 2>&1 || true
+            git push origin ":refs/tags/$tag" >/dev/null 2>&1 || true
+          else
+            echo "::error::PROBE_FAIL=$(tail -5 probe.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)"
+          fi
