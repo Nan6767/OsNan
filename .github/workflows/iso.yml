@@ -187,9 +187,13 @@ jobs:
           Профиль: **${{ steps.cfg.outputs.profile }}** ($((size/1048576)) МБ)
           Запуск: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           Контрольная сумма: \`$sum\`" \
-              "${parts[@]}" 2>&1 | tee release.log; then
+              "${parts[@]}" > release.log 2>&1; then
             echo "Релиз $tag опубликован"
+            tail -3 release.log
           else
-            echo "::error::RELEASE_FAILED=$(tail -3 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-600)"
+            # Без `| tee`: иначе статусом команды становится статус tee и
+            # ошибка публикации выглядит как успех.
+            tail -10 release.log
+            echo "::error::RELEASE_FAILED=$(tail -4 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-700)"
           fi
           sudo rm -f out/"$base".part* || true
