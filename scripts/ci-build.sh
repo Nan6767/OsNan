@@ -103,10 +103,7 @@ for repo in core extra multilib; do
         || warn "база $repo недоступна — часть пакетов не найдётся"
 done
 
-GEN_ARGS=()
-if [ "$PROFILE_NAME" = "slim" ]; then
-    GEN_ARGS=(--only-groups core,common,hyprland,plasma,apps,live)
-fi
+GEN_ARGS=(--profile "$PROFILE_NAME")
 
 # Быстрая проверка: все ли имена пакетов находятся в репозиториях.
 # Так ошибку в groups/*.txt видно за секунды, а не через час pacstrap-а.

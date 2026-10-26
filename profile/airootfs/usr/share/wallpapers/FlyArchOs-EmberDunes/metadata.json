@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "FlyArchOs"
+            }
+        ],
+        "Category": "Wallpapers",
+        "Description": "FlyArchOs wallpaper «Ember Dunes»",
+        "Id": "FlyArchOs-EmberDunes",
+        "License": "CC0-1.0",
+        "Name": "Ember Dunes"
+    },
+    "X-KPackage-Type": "Wallpaper/Images"
+}

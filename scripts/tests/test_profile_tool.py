@@ -34,6 +34,10 @@ def load_module(name: str, path: Path):
 
 profile_tool = load_module("flyarchos_profile_tool", PROFILE_TOOL)
 gen_packages = load_module("gen_packages", GEN_PACKAGES)
+theme_tool = load_module("flyarchos_theme_tool",
+                         REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "theme_tool.py")
+backup_tool = load_module("flyarchos_backup_tool",
+                          REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "backup_tool.py")
 
 
 class NormalizeTest(unittest.TestCase):
@@ -191,6 +195,91 @@ class GenPackagesTest(unittest.TestCase):
             bad.write_text("good-pkg\nBAD_PKG 1.0\n", encoding="utf-8")
             with self.assertRaises(gen_packages.PackageError):
                 gen_packages.parse_group(bad)
+
+
+class ProfilesTest(unittest.TestCase):
+    def all_packages(self) -> set[str]:
+        groups = gen_packages.load_groups(REPO / "groups")
+        return {pkg for _n, _p, pkgs in groups for pkg in pkgs}
+
+    def test_profiles_exist(self):
+        self.assertEqual(set(gen_packages.PROFILES), {"full", "slim", "mini"})
+
+    def test_slim_groups_are_real(self):
+        known = {name for name, _p, _pkgs in gen_packages.load_groups(REPO / "groups")}
+        for name in gen_packages.SLIM_GROUPS:
+            self.assertIn(name, known)
+
+    def test_mini_exclude_names_are_real_packages(self):
+        unknown = set(gen_packages.MINI_EXCLUDE) - self.all_packages()
+        self.assertEqual(unknown, set(), f"MINI_EXCLUDE содержит несуществующие пакеты: {unknown}")
+
+    def test_mini_keeps_essentials(self):
+        # mini-образ обязан оставаться полноценной системой с обоими DE
+        essentials = {"linux", "hyprland", "plasma-desktop", "kwin", "sddm", "firefox",
+                      "networkmanager", "grub", "snapper", "kitty", "dolphin"}
+        self.assertFalse(essentials & set(gen_packages.MINI_EXCLUDE))
+        self.assertTrue(essentials <= self.all_packages())
+
+    def test_mini_render_header(self):
+        groups = gen_packages.load_groups(REPO / "groups")
+        text = gen_packages.render(groups, "x", gen_packages.SLIM_GROUPS, "mini", 33)
+        self.assertIn("# Профиль: mini", text)
+
+
+class ThemePresetsTest(unittest.TestCase):
+    def test_presets_reference_real_wallpapers(self):
+        import json
+
+        manifest = json.loads((REPO / "profile" / "airootfs" / "usr" / "share"
+                               / "flyarchos" / "wallpapers.json").read_text(encoding="utf-8"))
+        ids = [entry["id"].lower() for entry in manifest["wallpapers"]]
+        for name, (wallpaper, accent, accent2, _label) in theme_tool.PRESETS.items():
+            self.assertTrue(any(wallpaper.lower() in i for i in ids),
+                            f"пресет {name}: нет обоев {wallpaper}")
+            self.assertEqual(len(theme_tool.hex_to_rgb(accent)), 3)
+            self.assertEqual(len(theme_tool.hex_to_rgb(accent2)), 3)
+
+
+class BackupToolTest(unittest.TestCase):
+    """Резервное копирование без rsync (запасной копировщик) на временном доме."""
+
+    def _make_home(self, tmp: str) -> Path:
+        home = Path(tmp) / "home"
+        (home / "docs").mkdir(parents=True)
+        (home / "docs" / "a.txt").write_text("hello", encoding="utf-8")
+        (home / ".cache" / "junk").mkdir(parents=True)
+        (home / ".cache" / "junk" / "x.bin").write_text("x" * 64, encoding="utf-8")
+        return home
+
+    def test_create_excludes_cache_and_dest_itself(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = self._make_home(tmp)
+            dest = home / "FlyArchOs-Backups"  # внутри дома — не должно быть рекурсии
+            snap = backup_tool.create_snapshot(home, dest, keep=5, rsync_path="")
+            self.assertEqual((snap / "docs" / "a.txt").read_text(encoding="utf-8"), "hello")
+            self.assertFalse((snap / ".cache").exists())
+            self.assertFalse((snap / "FlyArchOs-Backups").exists())
+            self.assertTrue((dest / "latest").is_symlink())
+
+    def test_prune_and_restore(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = self._make_home(tmp)
+            dest = Path(tmp) / "ext"
+            backup_tool.create_snapshot(home, dest, keep=5, rsync_path="")
+            (home / "docs" / "a.txt").write_text("changed", encoding="utf-8")
+            last = backup_tool.create_snapshot(home, dest, keep=1, rsync_path="")
+            self.assertEqual(backup_tool.list_snapshots(dest), [last])
+
+            target = Path(tmp) / "home2"
+            target.mkdir()
+            backup_tool.restore_snapshot(dest, last, target, rsync_path="")
+            self.assertEqual((target / "docs" / "a.txt").read_text(encoding="utf-8"), "changed")
+            self.assertFalse((target / backup_tool.MANIFEST).exists())
 
 
 if __name__ == "__main__":

@@ -4,6 +4,19 @@
 
 # Само окружение
 plasma-meta
+# Ядро оболочки перечислено явно, чтобы профиль mini мог исключить сам
+# plasma-meta (метапакет тянет Discover, DrKonqi+gdb, QtWebEngine и т.п.)
+plasma-desktop
+plasma-workspace
+kwin
+kscreenlocker
+plasma-integration
+aurorae
+milou
+kactivitymanagerd
+kde-gtk-config
+plasma-browser-integration
+baloo
 # Wayland-сессия Plasma поставляется самим plasma-workspace (пакет
 # plasma-wayland-session удалён из репозиториев Arch); X11-сессия с Plasma 6.8
 # больше не существует, поэтому plasma-x11-session здесь тоже нет.

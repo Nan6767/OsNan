@@ -20,6 +20,7 @@ on:
         options:
           - slim
           - full
+          - mini
         default: slim
       aur:
         description: "Добавить AUR-пакеты (groups/aur.txt)"
@@ -44,7 +45,7 @@ jobs:
       - name: Профиль сборки
         id: cfg
         run: |
-          profile=$(grep -oE 'profile=(slim|full)' BUILD_ISO.txt | head -1 | cut -d= -f2)
+          profile=$(grep -oE 'profile=(slim|full|mini)' BUILD_ISO.txt | head -1 | cut -d= -f2)
           echo "profile=${profile:-slim}" >> "$GITHUB_OUTPUT"
           echo "Профиль: ${profile:-slim}"
 
@@ -98,6 +99,7 @@ jobs:
       # в репозиторий — так сборку удобно отлаживать.
       - name: Сохранить лог сборки в репозиторий
         if: always()
+        continue-on-error: true
         env:
           BRANCH: ${{ github.ref_name }}
         run: |
@@ -108,6 +110,7 @@ jobs:
             cat build.log 2>/dev/null || echo "(лог пуст)"; } > "logs/iso-run-${{ github.run_number }}.log"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git restore . 2>/dev/null || git checkout -- . 2>/dev/null || true
           git checkout -B "logs-run-${{ github.run_number }}"
           git add logs
           if ! git diff --cached --quiet; then
@@ -115,14 +118,14 @@ jobs:
             # Ветка могла уйти вперёд, пока шла сборка, — перебазируемся,
             # иначе push отклоняется как не fast-forward и лог теряется.
             git fetch origin "$BRANCH" || true
-            git rebase "origin/$BRANCH" || git rebase --abort
+            git rebase FETCH_HEAD || git rebase --abort || true
             git push origin "HEAD:${BRANCH}" || echo "не удалось запушить лог"
           else
             echo "лог пуст — коммитить нечего"
           fi
 
       - name: Артефакты
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.upload }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.upload) }}
         uses: actions/upload-artifact@v4
         with:
           name: flyarchos-${{ steps.cfg.outputs.profile }}-iso-${{ github.run_number }}
@@ -154,23 +157,27 @@ jobs:
           fi
 
       - name: Публикация ISO в релиз GitHub
-        if: ${{ success() }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # out/ создан контейнером от root: runner не может писать туда
+          # части ISO, поэтому возвращаем владельца и режем в свой каталог.
+          sudo chown -R "$(id -un)" out || true
+          mkdir -p release-parts
           iso=$(ls -1 out/*.iso | head -1)
           base=$(basename "$iso")
           tag="iso-${{ github.run_number }}-${{ steps.cfg.outputs.profile }}"
           size=$(stat -c %s "$iso")
           sum=$(cut -d' ' -f1 < "$iso.sha256")
-          limit=$((1900 * 1024 * 1024))
+          limit=$((2047 * 1024 * 1024))
           parts=()
           if [ "$size" -gt "$limit" ]; then
-            echo "ISO $((size/1048576)) МБ — режем на части по 1900 МБ (лимит GitHub: 2 ГБ на файл релиза)"
-            split -b 1500M -d -a 2 "$iso" "out/$base.part"
-            parts=(out/"$base".part*)
+            echo "ISO $((size/1048576)) МБ — режем на части по 1500 МБ (лимит GitHub: 2 ГБ на файл релиза)"
+            split -b 1500M -d -a 2 "$iso" "release-parts/$base.part"
+            parts=(release-parts/"$base".part*)
             { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл)."
               echo
               echo "Собрать образ (Linux/macOS):"
@@ -178,8 +185,8 @@ jobs:
               echo "  sha256sum -c $base.sha256"
               echo
               echo "Windows (PowerShell):"
-              echo "  cmd /c copy /b $base.part* $base"; } > out/JOIN-README.txt
-            parts+=(out/JOIN-README.txt)
+              echo "  cmd /c copy /b $base.part* $base"; } > release-parts/JOIN-README.txt
+            parts+=(release-parts/JOIN-README.txt)
           else
             parts=("$iso")
           fi
@@ -201,4 +208,4 @@ jobs:
             tail -10 release.log
             echo "::error::RELEASE_FAILED=$(tail -4 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-700)"
           fi
-          sudo rm -f out/"$base".part* || true
+          sudo rm -f release-parts/"$base".part* || true

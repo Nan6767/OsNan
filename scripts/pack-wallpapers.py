@@ -62,6 +62,8 @@ CATALOG: list[tuple[str, str, str, tuple]] = [
     ("10-deep-wave", "Deep Wave", "Глубокие волны", ("theme", "waves", 5)),
     ("11-sunset-line", "Sunset Line", "Линия заката", ("theme", "sunset", 2)),
     ("12-mono-slate", "Mono Slate", "Монохром", ("theme", "mono", 4)),
+    ("13-ember-dunes", "Ember Dunes", "Тлеющие дюны", ("theme", "sunset", 21)),
+    ("14-abyss", "Abyss", "Бездна", ("theme", "nebula", 14)),
 ]
 
 AI_SIZE = (1920, 1080)

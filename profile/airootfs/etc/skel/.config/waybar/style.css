@@ -58,3 +58,12 @@ tooltip {
     border: 1px solid #22d3ee;
     border-radius: 10px;
 }
+
+#custom-updates {
+    color: #10121c;
+    background: #f59e0b;
+    border-radius: 10px;
+    margin: 5px 3px;
+    padding: 0 9px;
+    font-weight: bold;
+}

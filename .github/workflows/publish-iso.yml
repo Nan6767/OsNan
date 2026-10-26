@@ -63,20 +63,29 @@ jobs:
           echo "::error::PUBLISH_ISO=$base size=$((size/1048576))MB sha256=$sum"
           df -h / | tail -1
 
-          split -b 1500M -d -a 2 "$iso" "out/$base.part"
-          { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл релиза)."
-            echo
-            echo "Собрать образ (Linux/macOS):"
-            echo "  cat $base.part* > $base"
-            echo "  sha256sum -c $base.sha256"
-            echo
-            echo "Windows (cmd):"
-            echo "  copy /b $base.part* $base"; } > out/JOIN-README.txt
-
-          shopt -s nullglob
-          parts=(out/"$base".part*)
-          shopt -u nullglob
-          parts+=(out/JOIN-README.txt "$iso.sha256")
+          # Лимит GitHub Release — 2 GiB на файл. Влезает — грузим цельным
+          # файлом, нет — режем на части по 1500 МБ.
+          limit=$((2047 * 1024 * 1024))
+          parts=()
+          if [ "$size" -le "$limit" ]; then
+            echo "::error::PUBLISH_WHOLE_FILE=да ($((size/1048576)) МБ одним файлом)"
+            parts=("$iso")
+          else
+            split -b 1500M -d -a 2 "$iso" "out/$base.part"
+            { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл релиза)."
+              echo
+              echo "Собрать образ (Linux/macOS):"
+              echo "  cat $base.part* > $base"
+              echo "  sha256sum -c $base.sha256"
+              echo
+              echo "Windows (cmd):"
+              echo "  copy /b $base.part* $base"; } > out/JOIN-README.txt
+            shopt -s nullglob
+            parts=(out/"$base".part*)
+            shopt -u nullglob
+            parts+=(out/JOIN-README.txt)
+          fi
+          parts+=("$iso.sha256")
           echo "::error::PUBLISH_PARTS=${#parts[@]}"
           ls -lh out/
 
@@ -86,13 +95,9 @@ jobs:
           Сборка: https://github.com/${GH_REPO}/actions/runs/${SRC_RUN}
           Контрольная сумма: \`$sum\`
 
-          Образ нарезан на части по 1500 МБ (лимит GitHub — 2 ГБ на файл).
-          Как собрать обратно — в файле JOIN-README.txt. Целый ISO одним файлом
-          лежит в артефактах запуска сборки (нужна авторизация GitHub).
-
-          Известно об этой сборке: для запасного ядра linux-lts отсутствует
-          модуль NVIDIA (для основного ядра linux пакет nvidia-open на месте);
-          в исходниках уже исправлено, следующая сборка будет полной."
+          Если образ больше 2 ГБ, он нарезан на части по 1500 МБ (лимит GitHub
+          на файл релиза) — как собрать обратно, написано в JOIN-README.txt.
+          Целый ISO одним файлом также лежит в артефактах запуска сборки."
 
           start=$(date +%s)
           if gh release view "$TAG" >/dev/null 2>&1; then

@@ -243,7 +243,7 @@ def gui_mode() -> int:
     apply_btn = QPushButton("Применить набор ПО")
     apply_btn.clicked.connect(apply_software)
     update_btn = QPushButton("Обновить систему")
-    update_btn.clicked.connect(lambda: run_visible(["pacman", "-Syu"]))
+    update_btn.clicked.connect(lambda: run_visible(["flyarchos-update"]))
     info_btn = QPushButton("О системе")
     info_btn.clicked.connect(lambda: run_visible(["flyarchos-info"]))
     actions.addWidget(apply_btn)
@@ -251,6 +251,25 @@ def gui_mode() -> int:
     actions.addWidget(info_btn)
     actions.addStretch(1)
     layout.addLayout(actions)
+
+    # --- инструменты FlyArchOs ---------------------------------------------
+    hold = lambda cmd: ["sh", "-c", cmd + "; echo; read -p 'Enter — закрыть окно' _"]
+    tools = QHBoxLayout()
+    doctor_btn = QPushButton("Диагностика")
+    doctor_btn.clicked.connect(lambda: run_visible(hold("flyarchos-doctor")))
+    theme_btn = QPushButton("Следующая тема")
+    theme_btn.clicked.connect(
+        lambda: subprocess.Popen(["flyarchos-theme", "next"], start_new_session=True))
+    snap_btn = QPushButton("Снимки системы")
+    snap_btn.clicked.connect(lambda: run_visible(hold("flyarchos-snapshot")))
+    backup_btn = QPushButton("Резервная копия")
+    backup_btn.clicked.connect(lambda: run_visible(hold("flyarchos-backup")))
+    clean_btn = QPushButton("Уборка")
+    clean_btn.clicked.connect(lambda: run_visible(hold("flyarchos-clean")))
+    for btn in (doctor_btn, theme_btn, snap_btn, backup_btn, clean_btn):
+        tools.addWidget(btn)
+    tools.addStretch(1)
+    layout.addLayout(tools)
 
     # --- низ окна ---------------------------------------------------------
     status = QLabel("")

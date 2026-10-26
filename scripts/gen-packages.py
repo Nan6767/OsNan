@@ -94,12 +94,64 @@ def load_groups(groups_dir: Path) -> list[tuple[str, Path, list[str]]]:
     return result
 
 
-def render(groups: list[tuple[str, Path, list[str]]], title: str, only: Sequence[str] = ()) -> str:
+# --------------------------------------------------------------------------- #
+# Профили сборки. Единое место, где описано, чем slim и mini отличаются от
+# полного образа — build-iso.sh и ci-build.sh просто передают --profile.
+# --------------------------------------------------------------------------- #
+SLIM_GROUPS: list[str] = ["core", "common", "hyprland", "plasma", "apps", "live"]
+
+# mini: тот же состав групп, но без тяжёлых пакетов. Цель — ISO меньше 2 ГБ,
+# чтобы он влезал в GitHub Release одним файлом (лимит GitHub — 2 GiB).
+# Здесь только имена из groups/*.txt (зависимости pacman подтянет сам).
+MINI_EXCLUDE: list[str] = [
+    # второе ядро и заголовки, компиляторы
+    "linux-lts", "linux-lts-headers", "linux-headers", "base-devel",
+    # рантаймы для разработки
+    "nodejs", "npm", "python-pip",
+    # документация и дубль редактора
+    "man-pages", "texinfo", "vim",
+    # тяжёлые шрифты (остаются Noto Sans/Emoji, JetBrains Mono Nerd, DejaVu, Liberation)
+    "noto-fonts-cjk", "noto-fonts-extra", "ttf-fira-code", "ttf-roboto",
+    "ttf-opensans", "inter-font", "ttf-jetbrains-mono",
+    # второй браузер и мессенджеры (остаётся Firefox)
+    "chromium", "telegram-desktop", "discord", "qbittorrent",
+    # дубли и необязательное
+    "foot", "imagemagick", "fwupd", "clonezilla",
+    # стоковые обои и дополнения Plasma (свои обои в образе есть)
+    "plasma-workspace-wallpapers", "kdeplasma-addons",
+    # графический центр обновлений заменяет flyarchos-update
+    "discover", "packagekit", "packagekit-qt6",
+    "elisa", "kdeconnect", "kinfocenter",
+    # Метапакет Plasma тянет Discover, DrKonqi+gdb, QtWebEngine и пр.;
+    # ядро оболочки в 30-plasma.txt перечислено явно, без него обойдёмся
+    "plasma-meta",
+    # Qt5-стек: вся система (Plasma, SDDM, Calamares, KeePassXC) уже на Qt6
+    "qt5-wayland", "qt5ct",
+    # просмотрщики Plasma (PDF и картинки откроет Firefox)
+    "okular", "gwenview", "kwrite", "kfind",
+    # печать/сканирование и GUI-разметка ставятся потом одной командой;
+    # разбивку диска в live делает сам Calamares
+    "system-config-printer", "sane", "simple-scan", "gparted",
+    # второй установщик и второй редактор в mini не нужны
+    "archinstall", "neovim", "bind", "ttf-dejavu",
+]
+
+PROFILES: dict[str, dict[str, list[str]]] = {
+    "full": {"groups": [], "exclude": []},
+    "slim": {"groups": SLIM_GROUPS, "exclude": []},
+    "mini": {"groups": SLIM_GROUPS, "exclude": MINI_EXCLUDE},
+}
+
+
+def render(groups: list[tuple[str, Path, list[str]]], title: str, only: Sequence[str] = (),
+           profile: str = "full", excluded_count: int = 0) -> str:
     lines = [HEADER, f"# Файл: {title}", "#"]
-    if only:
-        lines.append(f"# Профиль: slim (группы: {', '.join(only)})")
-    else:
+    if profile == "full" and not only:
         lines.append("# Профиль: full (все группы)")
+    else:
+        label = profile if profile != "full" else "slim"
+        suffix = f"; исключено пакетов: {excluded_count}" if excluded_count else ""
+        lines.append(f"# Профиль: {label} (группы: {', '.join(only)}{suffix})")
     total = 0
     for name, path, packages in groups:
         total += len(packages)
@@ -115,6 +167,9 @@ def main() -> int:
     parser.add_argument("--groups-dir", type=Path, default=DEFAULT_GROUPS)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--aur-out", type=Path, default=DEFAULT_AUR_OUT)
+    parser.add_argument("--profile", choices=["full", "slim", "mini"], default="",
+                       help="готовый профиль: full — всё, slim — без доп. наборов, "
+                            "mini — компактный ISO < 2 ГБ одним файлом")
     parser.add_argument("--only-groups", default="",
                        help="ограничить состав (например core,common,hyprland,plasma,apps,live)")
     parser.add_argument("--exclude", default="",
@@ -124,6 +179,13 @@ def main() -> int:
     args = parser.parse_args()
 
     only = [name.strip() for name in args.only_groups.split(",") if name.strip()]
+    exclude = {name.strip() for name in args.exclude.split(",") if name.strip()}
+    profile = args.profile
+    if profile:
+        spec = PROFILES[profile]
+        if not only:
+            only = list(spec["groups"])
+        exclude |= set(spec["exclude"])
 
     try:
         groups = load_groups(args.groups_dir)
@@ -139,6 +201,15 @@ def main() -> int:
             return 1
         groups = [item for item in groups if item[0] in only]
 
+    excluded_count = 0
+    if exclude:
+        trimmed = []
+        for name, path, pkgs in groups:
+            kept = [p for p in pkgs if p not in exclude]
+            excluded_count += len(pkgs) - len(kept)
+            trimmed.append((name, path, kept))
+        groups = trimmed
+
     if args.stats:
         width = max(len(name) for name, _, _ in groups)
         total = 0
@@ -148,14 +219,7 @@ def main() -> int:
         print(f"{'ИТОГО':<{width}}  {total:>4}")
         return 0
 
-    exclude = {name.strip() for name in args.exclude.split(",") if name.strip()}
-    if exclude:
-        groups = [
-            (name, path, [p for p in pkgs if p not in exclude])
-            for name, path, pkgs in groups
-        ]
-
-    content = render(groups, args.out.name, only)
+    content = render(groups, args.out.name, only, profile, excluded_count)
     # В дополнительный список попадают только те AUR-пакеты, которые РЕАЛЬНО
     # собраны в локальный репозиторий repo/x86_64 — иначе mkarchiso упадёт
     # с «target not found».

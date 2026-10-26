@@ -55,6 +55,12 @@ ln -sf /usr/lib/flyarchos/wallpapers.py /usr/bin/flyarchos-wallpaper-gen
 ln -sf /usr/lib/flyarchos/welcome-gui.py /usr/bin/flyarchos-welcome
 ln -sf /usr/lib/flyarchos/flyarchos-info /usr/bin/flyarchos-info
 ln -sf /usr/lib/flyarchos/flyarchos-install /usr/bin/flyarchos-install
+ln -sf /usr/lib/flyarchos/flyarchos-update /usr/bin/flyarchos-update
+ln -sf /usr/lib/flyarchos/doctor_tool.py /usr/bin/flyarchos-doctor
+ln -sf /usr/lib/flyarchos/theme_tool.py /usr/bin/flyarchos-theme
+ln -sf /usr/lib/flyarchos/flyarchos-snapshot /usr/bin/flyarchos-snapshot
+ln -sf /usr/lib/flyarchos/backup_tool.py /usr/bin/flyarchos-backup
+ln -sf /usr/lib/flyarchos/flyarchos-clean /usr/bin/flyarchos-clean
 
 echo "==> [7/9] Обои по умолчанию"
 install -d -m 755 /usr/share/backgrounds/flyarchos
@@ -65,6 +71,32 @@ rm -rf /var/cache/pacman/pkg/* || true
 rm -rf /root/.cache/* || true
 rm -f /var/lib/systemd/random-seed || true
 : > /etc/machine-id
+
+# Профиль mini: образ должен влезть в 2 ГБ одним файлом (лимит GitHub
+# Release). Убираем документацию и локали кроме английской и русской —
+# пакеты при этом не трогаем, pacman о файлах не узнает и не сломается.
+if [ "$(cat /usr/share/flyarchos/profile-variant 2>/dev/null)" = "mini" ]; then
+    echo "==> [mini] Урезание документации и локалей"
+    rm -f /boot/initramfs-*-fallback.img 2>/dev/null || true
+    # Прошивки ARM SoC и серверных сетевых карт на x86_64 не нужны
+    rm -rf /usr/lib/firmware/qcom /usr/lib/firmware/mellanox 2>/dev/null || true
+    # Шрифты редких письменностей (остаются латиница, кириллица, символы и моно)
+    for f in /usr/share/fonts/noto/NotoSans[A-Z]*.ttf /usr/share/fonts/noto/NotoSerif[A-Z]*.ttf; do
+        [ -e "$f" ] || continue
+        case "$(basename "$f")" in
+            NotoSansDisplay*|NotoSansMono*|NotoSansSymbols*|NotoSansMath*) : ;;
+            *) rm -f "$f" ;;
+        esac
+    done
+    fc-cache -f >/dev/null 2>&1 || true
+    rm -rf /usr/share/doc /usr/share/gtk-doc /usr/share/info /usr/share/man 2>/dev/null || true
+    for d in /usr/share/locale/*/; do
+        case "$(basename "$d")" in
+            en*|ru*|C*|locale.alias) : ;;
+            *) rm -rf "$d" ;;
+        esac
+    done
+fi
 
 echo "==> [9/9] Готово"
 echo "FlyArchOs live image prepared" > /etc/flyarchos-build-stamp

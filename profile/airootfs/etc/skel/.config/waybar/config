@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
+    "modules-right": ["custom/updates", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -59,6 +59,13 @@
         "format-charging": " {capacity}%",
         "format-icons": ["", "", "", "", ""],
         "tooltip": true
+    },
+    "custom/updates": {
+        "exec": "n=$(checkupdates 2>/dev/null | wc -l); [ \"$n\" -gt 0 ] && echo \"↑ $n\" || true",
+        "interval": 3600,
+        "hide-if-empty": true,
+        "tooltip": false,
+        "on-click": "kitty -e flyarchos-update"
     },
     "tray": {
         "icon-size": 18,

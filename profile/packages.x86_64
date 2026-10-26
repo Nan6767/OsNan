@@ -7,8 +7,8 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 302
-# Профиль: full (все группы)
+# Всего пакетов: 323
+# Профиль:  (группы: )
 # --- core (00-core.txt): 118 шт. --------------------
 base
 base-devel
@@ -129,7 +129,7 @@ python-pip
 nodejs
 npm
 
-# --- common (10-common.txt): 40 шт. --------------------
+# --- common (10-common.txt): 42 шт. --------------------
 xorg-xwayland
 xorg-xrandr
 qt5-wayland
@@ -167,15 +167,18 @@ ffmpegthumbs
 tumbler
 playerctl
 brightnessctl
+libnotify
+polkit-kde-agent
 gnome-keyring
 libsecret
 seahorse
 
-# --- hyprland (20-hyprland.txt): 14 шт. --------------------
+# --- hyprland (20-hyprland.txt): 15 шт. --------------------
 hyprland
 hyprpaper
 hyprlock
 hypridle
+hyprsunset
 xdg-desktop-portal-hyprland
 waybar
 wofi
@@ -187,8 +190,19 @@ thunar-archive-plugin
 thunar-volman
 xarchiver
 
-# --- plasma (30-plasma.txt): 37 шт. --------------------
+# --- plasma (30-plasma.txt): 48 шт. --------------------
 plasma-meta
+plasma-desktop
+plasma-workspace
+kwin
+kscreenlocker
+plasma-integration
+aurorae
+milou
+kactivitymanagerd
+kde-gtk-config
+plasma-browser-integration
+baloo
 plasma-workspace-wallpapers
 plasma-nm
 plasma-pa
@@ -321,6 +335,15 @@ thunderbird-i18n-ru
 pdfarranger
 zathura
 zathura-pdf-mupdf
+
+# --- privacy (85-privacy.txt): 7 шт. --------------------
+tor
+torbrowser-launcher
+onionshare
+veracrypt
+metadata-cleaner
+firejail
+ufw
 
 # --- live (99-live.txt): 7 шт. --------------------
 archinstall

@@ -1,0 +1,10 @@
+[Unit]
+Description=FlyArchOs — менять обои раз в день
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1d
+Persistent=true
+
+[Install]
+WantedBy=timers.target

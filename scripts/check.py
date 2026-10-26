@@ -237,25 +237,24 @@ def check_packagechooser_groups(report: Report) -> None:
     report.add("packagechooser ↔ группы пакетов", not problems, "; ".join(problems))
 
 
-def detected_profile_groups() -> list[str]:
-    """Какие группы были использованы при генерации packages.x86_64."""
+def detected_profile_name() -> str:
+    """Какой профиль записан в шапке packages.x86_64 (full/slim/mini)."""
     path = PROFILE / "packages.x86_64"
     if not path.is_file():
-        return []
-    match = re.search(r"^# Профиль: slim \(группы: ([^)]+)\)",
-                      path.read_text(encoding="utf-8"), re.M)
-    if not match:
-        return []
-    return [name.strip() for name in match.group(1).split(",") if name.strip()]
+        return "full"
+    match = re.search(r"^# Профиль: (\w+)", path.read_text(encoding="utf-8"), re.M)
+    if match and match.group(1) in ("slim", "mini"):
+        return match.group(1)
+    return "full"
 
 
 def check_packages_list(report: Report) -> None:
     cmd = [sys.executable, str(REPO / "scripts" / "gen-packages.py"), "--check"]
-    groups = detected_profile_groups()
-    if groups:
-        cmd += ["--only-groups", ",".join(groups)]
+    profile = detected_profile_name()
+    if profile != "full":
+        cmd += ["--profile", profile]
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    suffix = f" [профиль: {', '.join(groups)}]" if groups else ""
+    suffix = f" [профиль: {profile}]" if profile != "full" else ""
     report.add("packages.x86_64 актуален (groups/)" + suffix, proc.returncode == 0,
                proc.stderr.strip().replace("\n", " "))
 
@@ -415,6 +414,12 @@ def check_installer_scripts(report: Report) -> None:
         "welcome-gui.py",
         "flyarchos-info",
         "flyarchos-install",
+        "flyarchos-update",
+        "flyarchos-snapshot",
+        "doctor_tool.py",
+        "theme_tool.py",
+        "backup_tool.py",
+        "flyarchos-clean",
     ]
     missing = []
     non_exec = []

@@ -6,6 +6,30 @@ set -uo pipefail
 
 C_CYAN=$'\033[36m'; C_MAG=$'\033[35m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
 
+if [ "${1:-}" = "--keys" ]; then
+    cat <<'KEYS'
+Горячие клавиши FlyArchOs (Hyprland)
+  SUPER+Enter        терминал (Kitty)
+  SUPER+D            меню приложений (Wofi)
+  SUPER+B / SUPER+E  браузер / файлы
+  SUPER+T            информация о системе
+  SUPER+/            эта справка
+  SUPER+W            случайные обои
+  SUPER+Shift+W      следующая тема оформления (flyarchos-theme)
+  SUPER+P            скриншот области в буфер обмена
+  SUPER+Shift+P      скриншот области в файл ~/Pictures/Screenshots
+  SUPER+Shift+V      история буфера обмена (cliphist)
+  SUPER+N            ночной режим (тёплый экран, hyprsunset)
+  SUPER+L            блокировка экрана
+  SUPER+Q            закрыть окно        SUPER+Shift+Q  выход из Hyprland
+  SUPER+F            полный экран        SUPER+V        плавающее окно
+  SUPER+1..9         рабочие столы       SUPER+стрелки  фокус между окнами
+  SUPER+колесо мыши  листать рабочие столы
+  Alt+Shift          раскладка RU/US
+KEYS
+    exit 0
+fi
+
 echo
 cat /usr/share/flyarchos/logo.txt 2>/dev/null
 echo
@@ -42,6 +66,13 @@ cat <<'EOF'
   flyarchos-profile show     какой набор ПО установлен / что будет удалено
   flyarchos-profile --apply  изменить набор ПО
   flyarchos-install          запустить установщик (Calamares)
+  flyarchos-update           обновить систему (pacman + flatpak, снимок btrfs)
+  flyarchos-doctor           диагностика: службы, диск, пакеты, сеть, звук
+  flyarchos-theme list       пресеты оформления (обои + акцент + рамки)
+  flyarchos-snapshot         снимки системы на btrfs (snapper)
+  flyarchos-backup           инкрементная копия домашнего каталога
+  flyarchos-clean            уборка: кэш пакетов, журнал, миниатюры
+  flyarchos-info --keys      все горячие клавиши Hyprland
 EOF
 echo
 echo "${C_DIM}Горячие клавиши Hyprland: SUPER+Enter — терминал, SUPER+D — меню,"
