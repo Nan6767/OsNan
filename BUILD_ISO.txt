@@ -36,3 +36,4 @@ profile=mini
 # пересборка mini: без plasma-meta 2026-10-26T18:14:30Z
 trigger: 1.2.0 mini
 trigger: 1.3.0-beta mini
+trigger: 1.3.0-beta mini (os-release fix)
