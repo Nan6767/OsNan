@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/updates", "custom/clipboard", "custom/nightlight", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
+    "modules-right": ["custom/updates", "custom/weather", "custom/clipboard", "custom/nightlight", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -66,6 +66,14 @@
         "hide-if-empty": true,
         "tooltip": false,
         "on-click": "kitty -e flyarchos-update"
+    },
+    "custom/weather": {
+        "exec": "curl -fs --max-time 5 'https://wttr.in/?format=%c%20%t' 2>/dev/null || true",
+        "interval": 1800,
+        "hide-if-empty": true,
+        "tooltip": true,
+        "tooltip-format": "Погода по IP (wttr.in). Клик — подробный прогноз",
+        "on-click": "kitty --hold -e curl -s 'https://wttr.in/?lang=ru'"
     },
     "custom/clipboard": {
         "format": "",

@@ -67,6 +67,15 @@ ln -sf /usr/lib/flyarchos/flyarchos-aur /usr/bin/flyarchos-aur
 # конфликте с файлом пакета filesystem (проверено сборкой №22).
 install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release
 
+# Фон экрана входа: фирменные обои вместо стандартных у темы breeze
+if [ -f /usr/share/sddm/themes/breeze/theme.conf ]; then
+    if grep -q '^background=' /usr/share/sddm/themes/breeze/theme.conf; then
+        sed -i 's|^background=.*|background=/usr/share/backgrounds/flyarchos/default.jpg|' /usr/share/sddm/themes/breeze/theme.conf
+    else
+        printf '\nbackground=/usr/share/backgrounds/flyarchos/default.jpg\n' >> /usr/share/sddm/themes/breeze/theme.conf
+    fi
+fi
+
 echo "==> [7/9] Обои по умолчанию"
 install -d -m 755 /usr/share/backgrounds/flyarchos
 flyarchos-wallpaper set-default aurora-nexus 2>/dev/null || true

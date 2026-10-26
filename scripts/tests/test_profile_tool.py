@@ -296,20 +296,50 @@ class BackupAutoTest(unittest.TestCase):
 
 
 class VersionTest(unittest.TestCase):
-    """Бета-версия должна быть одинаковой в profiledef, os-release и файле версии."""
+    """Бета-версия одинаковая в profiledef, os-release, файле версии и брендинге."""
 
-    def test_beta_version_everywhere(self):
+    def test_version_consistency(self):
+        import re
+
         profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
-        self.assertIn('iso_version="1.3.0-beta"', profiledef)
+        m = re.search(r'iso_version="([^"]+)"', profiledef)
+        self.assertIsNotNone(m)
+        ver = m.group(1)
+        # Стабильная линия — 1.0.0; в дереве разработки держим только беты.
+        self.assertTrue(ver.endswith("-beta"), ver)
         osrel = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "os-release").read_text(
             encoding="utf-8")
-        self.assertIn("VERSION_ID=1.3.0-beta", osrel)
-        self.assertIn('PRETTY_NAME="FlyArchOs 1.3.0-beta"', osrel)
+        self.assertIn(f"VERSION_ID={ver}", osrel)
+        self.assertIn(f'PRETTY_NAME="FlyArchOs {ver}"', osrel)
         version = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "version").read_text(
             encoding="utf-8").strip()
-        self.assertEqual(version, "1.3.0-beta")
+        self.assertEqual(version, ver)
+        branding = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "branding"
+                    / "flyarchos" / "branding.desc").read_text(encoding="utf-8")
+        self.assertIn(f'"{ver}"', branding)
         customize = (REPO / "profile" / "customize_airootfs.sh").read_text(encoding="utf-8")
         self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", customize)
+
+
+class InstallerFinalizeTest(unittest.TestCase):
+    """Финализатор включает файрвол только при наборе «Приватность»."""
+
+    def test_firewall_block(self):
+        fin = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+               / "install-finalize.sh").read_text(encoding="utf-8")
+        self.assertIn("*privacy*)", fin)
+        self.assertIn("systemctl enable ufw.service", fin)
+        self.assertIn('DEFAULT_INPUT_POLICY="DROP"', fin)
+
+
+class DoctorSecurityTest(unittest.TestCase):
+    """У доктора есть раздел безопасности, и он вызывается из main."""
+
+    def test_security_check_wired(self):
+        doc = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+               / "doctor_tool.py").read_text(encoding="utf-8")
+        self.assertIn("def check_security()", doc)
+        self.assertGreaterEqual(doc.count("check_security()"), 2)
 
 
 if __name__ == "__main__":

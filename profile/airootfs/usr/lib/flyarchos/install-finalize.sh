@@ -166,6 +166,25 @@ for unit in NetworkManager.service sddm.service bluetooth.service systemd-timesy
     run systemctl enable "$unit"
 done
 
+# --- 6б. Файрвол для набора «Приватность» ---------------------------------
+FIREWALL="не установлен"
+if command -v ufw >/dev/null 2>&1; then
+    FIREWALL="установлен, выключен (sudo systemctl enable --now ufw)"
+    case "$EXTRAS" in
+        *privacy*)
+            say "Файрвол UFW: включаю (набор «Приватность»)"
+            if [ -f /etc/ufw/ufw.conf ]; then
+                sed -i 's/^ENABLED=no/ENABLED=yes/' /etc/ufw/ufw.conf
+            fi
+            if [ -f /etc/default/ufw ]; then
+                sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/; s/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/; s/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="DROP"/' /etc/default/ufw
+            fi
+            run systemctl enable ufw.service
+            FIREWALL="включён (входящие запрещены, исходящие разрешены)"
+            ;;
+    esac
+fi
+
 # --- 7. Первый вход: одноразовый помощник ---------------------------------
 install -d -m 755 /etc/skel/.config/flyarchos
 if [ -f /etc/skel/.config/flyarchos/welcome-done ]; then
@@ -187,6 +206,7 @@ rm -f /root/.bash_history
     echo "  Дата:          $(date -Is)"
     echo "  Окружение:     $DESKTOP"
     echo "  Наборы ПО:     ${EXTRAS:-не выбраны}"
+    echo "  Файрвол UFW:   $FIREWALL"
     echo "  Ядро:          $(uname -r)"
     echo
     echo "Полезные команды:"
