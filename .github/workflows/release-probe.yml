@@ -1,9 +1,9 @@
 name: Release probe
 
-# Вспомогательный запуск: проверяет, может ли GITHUB_TOKEN создавать релизы
-# и загружать крупные файлы (у релиза GitHub лимит 2 ГБ на файл).
-# Нужен потому, что логи Actions недоступны извне, а шаг публикации ISO
-# в iso.yml может «успешно» завершиться и без релиза.
+# Вспомогательный запуск: проверяет полный сценарий публикации ISO —
+# нарезку файла размером с образ на части и загрузку их в релиз GitHub
+# (лимит релиза: 2 ГБ на файл). Логи Actions извне недоступны, поэтому
+# результат передаём аннотациями.
 #
 # Запуск: допишите любую строку в RELEASE_PROBE.txt и запушьте.
 on:
@@ -20,33 +20,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Проба создания релиза
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "probe $(date -u +%FT%TZ)" > probe.txt
-          tag="probe-${{ github.run_number }}"
-          if gh release create "$tag" --title "probe" --notes "probe" probe.txt > probe.log 2>&1; then
-            echo "::error::PROBE_OK=релиз $tag создан"
-          else
-            echo "::error::PROBE_FAIL=$(tail -5 probe.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)"
-          fi
+      - name: Место на диске
+        run: df -h /
 
-      - name: Проба загрузки крупного файла (1.5 ГБ)
-        continue-on-error: true
+      - name: "Полный сценарий: файл 7.6 ГБ, нарезка, загрузка"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -x
           tag="probe-${{ github.run_number }}"
-          head -c 1500M /dev/urandom > big.bin
-          split -b 1500M -d -a 2 big.bin big.bin.part
-          ls -lh big.bin.part*
+          mkdir -p out
+          head -c 7600M /dev/zero > out/flyarchos-1.0.0-x86_64.iso
+          iso=out/flyarchos-1.0.0-x86_64.iso
+          base=$(basename "$iso")
+          sha256sum "$iso" | sed "s|out/||" > "$iso.sha256"
+          size=$(stat -c %s "$iso")
+          sum=$(cut -d' ' -f1 < "$iso.sha256")
+          echo "::error::PROBE_SIZE=$((size/1048576))MB"
+
+          split -b 1500M -d -a 2 "$iso" "out/$base.part" || echo "::error::PROBE_SPLIT_FAIL=$?"
+          ls -lh out/ | head -12
+          parts=()
+          shopt -s nullglob
+          parts=(out/"$base".part*)
+          shopt -u nullglob
+          echo "::error::PROBE_PARTS=${#parts[@]}"
+
+          echo "инструкция" > out/JOIN-README.txt
+          parts+=(out/JOIN-README.txt)
+          parts+=("$iso.sha256")
+
           start=$(date +%s)
-          if gh release upload "$tag" big.bin.part00 --clobber > upload.log 2>&1; then
-            echo "::error::UPLOAD_OK_1500MB=$(( $(date +%s) - start )) сек"
+          if gh release create "$tag" --title "probe" --notes "probe $sum" "${parts[@]}" > release.log 2>&1; then
+            echo "::error::PROBE_UPLOAD_OK=$(( $(date +%s) - start )) сек, частей ${#parts[@]}"
           else
-            echo "::error::UPLOAD_FAIL_1500MB=$(tail -4 upload.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-800)"
+            echo "::error::PROBE_UPLOAD_FAIL=$(tail -6 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-900)"
           fi
+          df -h / | tail -1
 
       - name: Уборка
         if: always()
