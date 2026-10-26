@@ -63,6 +63,10 @@ ln -sf /usr/lib/flyarchos/backup_tool.py /usr/bin/flyarchos-backup
 ln -sf /usr/lib/flyarchos/flyarchos-clean /usr/bin/flyarchos-clean
 ln -sf /usr/lib/flyarchos/flyarchos-aur /usr/bin/flyarchos-aur
 
+# Фирменный os-release: кладём после pacstrap, иначе pacman падает на
+# конфликте с файлом пакета filesystem (проверено сборкой №22).
+install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release
+
 echo "==> [7/9] Обои по умолчанию"
 install -d -m 755 /usr/share/backgrounds/flyarchos
 flyarchos-wallpaper set-default aurora-nexus 2>/dev/null || true

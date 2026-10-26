@@ -301,12 +301,15 @@ class VersionTest(unittest.TestCase):
     def test_beta_version_everywhere(self):
         profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
         self.assertIn('iso_version="1.3.0-beta"', profiledef)
-        osrel = (REPO / "profile" / "airootfs" / "usr" / "lib" / "os-release").read_text(encoding="utf-8")
+        osrel = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "os-release").read_text(
+            encoding="utf-8")
         self.assertIn("VERSION_ID=1.3.0-beta", osrel)
         self.assertIn('PRETTY_NAME="FlyArchOs 1.3.0-beta"', osrel)
         version = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "version").read_text(
             encoding="utf-8").strip()
         self.assertEqual(version, "1.3.0-beta")
+        customize = (REPO / "profile" / "customize_airootfs.sh").read_text(encoding="utf-8")
+        self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", customize)
 
 
 if __name__ == "__main__":
