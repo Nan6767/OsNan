@@ -4,7 +4,8 @@
 # файла — workflow «Publish ISO» скачает артефакт указанного запуска
 # Build ISO, нарежет образ на части (лимит релиза — 2 ГБ на файл) и
 # создаст релиз. Пересборка ISO при этом не нужна.
-run_id=40250847532
-artifact=flyarchos-full-iso-14
-tag=iso-14-full
-profile=full
+run_id=40375977636
+artifact=flyarchos-mini-iso-19
+tag=iso-19-mini
+profile=mini
+# публикация mini цельным файлом (2 134 933 504 байт < 2 GiB)

@@ -65,7 +65,7 @@ jobs:
 
           # Лимит GitHub Release — 2 GiB на файл. Влезает — грузим цельным
           # файлом, нет — режем на части по 1500 МБ.
-          limit=$((2000 * 1024 * 1024))
+          limit=$((2040 * 1024 * 1024))
           parts=()
           if [ "$size" -le "$limit" ]; then
             echo "::error::PUBLISH_WHOLE_FILE=да ($((size/1048576)) МБ одним файлом)"

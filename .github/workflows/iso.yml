@@ -172,7 +172,7 @@ jobs:
           tag="iso-${{ github.run_number }}-${{ steps.cfg.outputs.profile }}"
           size=$(stat -c %s "$iso")
           sum=$(cut -d' ' -f1 < "$iso.sha256")
-          limit=$((2000 * 1024 * 1024))
+          limit=$((2040 * 1024 * 1024))
           parts=()
           if [ "$size" -gt "$limit" ]; then
             echo "ISO $((size/1048576)) МБ — режем на части по 1500 МБ (лимит GitHub: 2 ГБ на файл релиза)"
