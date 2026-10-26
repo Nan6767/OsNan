@@ -1,12 +1,28 @@
 name: Build ISO
 
-# Сборка «жирного» образа занимает час и требует привилегированного
-# контейнера, поэтому запускается вручную: Actions → Build ISO → Run workflow.
+# Сборка ISO в облаке: привилегированный контейнер archlinux на раннере GitHub.
+# Запуск вручную: Actions → Build ISO → Run workflow.
+#
+# Почему так: mkarchiso нужны root, монтирование и сеть до зеркал Arch —
+# обычная песочница этого не даёт. slim — компактный образ (~3-4 ГБ, оба
+# окружения без дополнительных наборов), full — «жирный» (~10 ГБ).
 on:
+  # Пуш-триггер — чтобы запускать сборку без прав на workflow_dispatch:
+  # достаточно изменить файл BUILD_ISO.txt (в нём же задаётся профиль).
+  push:
+    paths:
+      - "BUILD_ISO.txt"
   workflow_dispatch:
     inputs:
+      profile:
+        description: "Профиль образа"
+        type: choice
+        options:
+          - slim
+          - full
+        default: slim
       aur:
-        description: "Собрать и AUR-пакеты (groups/aur.txt)"
+        description: "Добавить AUR-пакеты (groups/aur.txt)"
         type: boolean
         default: false
       upload:
@@ -18,41 +34,171 @@ jobs:
   iso:
     name: mkarchiso
     runs-on: ubuntu-latest
-    timeout-minutes: 240
-    container:
-      image: archlinux:latest
-      options: --privileged
+    timeout-minutes: 330
+    # Нужно, чтобы сборка могла сама приложить ISO к релизу и запушить лог.
+    permissions:
+      contents: write
     steps:
-      - name: Зависимости сборки
-        run: |
-          pacman -Sy --noconfirm --needed archlinux-keyring
-          pacman -Syu --noconfirm --needed archiso git python python-yaml squashfs-tools \
-              rsync cdrtools dosfstools mtools grub efibootmgr
-
       - uses: actions/checkout@v4
 
-      - name: Проверка дерева
-        run: python scripts/check.py
-
-      - name: Сборка AUR-пакетов
-        if: ${{ inputs.aur }}
-        run: ./scripts/build-aur.sh || echo "AUR собран частично — продолжаем без него"
-
-      - name: Сборка ISO
+      - name: Профиль сборки
+        id: cfg
         run: |
-          mkdir -p out
-          ./scripts/build-iso.sh --clean
+          profile=$(grep -oE 'profile=(slim|full)' BUILD_ISO.txt | head -1 | cut -d= -f2)
+          echo "profile=${profile:-slim}" >> "$GITHUB_OUTPUT"
+          echo "Профиль: ${profile:-slim}"
+
+      - name: Место на диске до очистки
+        run: df -h /
+
+      - name: Очистка диска раннера (android/dotnet/ghc съедают ~15 ГБ)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/share/swift /usr/local/share/boost /usr/share/gradle
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+          sudo docker image prune -a -f || true
+          df -h /
+
+      - name: Сборка ISO в контейнере archlinux
+        id: build
+        run: |
+          set -o pipefail
+          docker run --rm --privileged \
+            -v "$GITHUB_WORKSPACE:/flyarchos" -w /flyarchos \
+            archlinux:latest \
+            ./scripts/ci-build.sh \
+              "${{ github.event_name == 'workflow_dispatch' && inputs.profile || steps.cfg.outputs.profile }}" \
+              ${{ inputs.aur && '--aur' || '' }} 2>&1 | tee build.log
 
       - name: Информация об образе
         run: |
-          ls -lh out/
+          ls -lh out/ || true
           cat out/*.sha256 || true
+          df -h / | tail -1
+
+      # Логи Actions недоступны извне (блоки сети), поэтому сохраняем их
+      # в репозиторий — так сборку удобно отлаживать.
+      - name: Хвост лога сборки
+        if: always()
+        run: |
+          # Длинные строки (список пакетов) обрезаем, иначе они съедают всю
+          # аннотацию и настоящей ошибки не видно.
+          if [ -s build.log ]; then
+            clean=$(sed -r 's/\x1b\[[0-9;]*m//g' build.log | cut -c1-200)
+            tailmsg=$(echo "$clean" | tail -n 30 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-2500)
+            errs=$(echo "$clean" | grep -inE "ошибка|error|failed|Traceback|не найден|not found|aborting|ОШИБКА" \
+                   | grep -v "^[0-9]*:==> " | head -n 12 | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-2500)
+            echo "::error::BUILDLOG_ERRORS=${errs}"
+            echo "::error::BUILDLOG_TAIL=${tailmsg}"
+          else
+            echo "::error::BUILDLOG пуст"
+          fi
+
+      # Логи Actions недоступны извне (сеть ограничена), поэтому сохраняем их
+      # в репозиторий — так сборку удобно отлаживать.
+      - name: Сохранить лог сборки в репозиторий
+        if: always()
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          mkdir -p logs
+          { echo "# Сборка ISO: run ${{ github.run_number }}, профиль ${{ steps.cfg.outputs.profile }}, $(date -u +%FT%TZ)"
+            echo "# Статус шага сборки: ${{ steps.build.outcome }}"
+            echo
+            cat build.log 2>/dev/null || echo "(лог пуст)"; } > "logs/iso-run-${{ github.run_number }}.log"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "logs-run-${{ github.run_number }}"
+          git add logs
+          if ! git diff --cached --quiet; then
+            git commit -m "Лог сборки ISO (run ${{ github.run_number }})"
+            # Ветка могла уйти вперёд, пока шла сборка, — перебазируемся,
+            # иначе push отклоняется как не fast-forward и лог теряется.
+            git fetch origin "$BRANCH" || true
+            git rebase "origin/$BRANCH" || git rebase --abort
+            git push origin "HEAD:${BRANCH}" || echo "не удалось запушить лог"
+          else
+            echo "лог пуст — коммитить нечего"
+          fi
 
       - name: Артефакты
-        if: ${{ inputs.upload }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
-          name: flyarchos-iso
-          path: out/*.iso
-          retention-days: 7
+          name: flyarchos-${{ steps.cfg.outputs.profile }}-iso-${{ github.run_number }}
+          path: |
+            out/*.iso
+            out/*.sha256
+          retention-days: 90
           if-no-files-found: error
+          compression-level: 0
+
+      # Рабочий каталог mkarchiso (work/) занимает десятки ГБ и после сборки
+      # не нужен — освобождаем место под нарезку ISO для релиза.
+      - name: Очистка рабочего каталога
+        if: always()
+        run: |
+          sudo rm -rf work || true
+          df -h / | tail -1
+
+      - name: Итоги сборки
+        if: always()
+        run: |
+          iso=$(ls -1 out/*.iso 2>/dev/null | head -1 || true)
+          if [ -n "$iso" ]; then
+            size=$(stat -c %s "$iso")
+            sum=$(cut -d' ' -f1 < "$iso.sha256")
+            echo "::error::ISO_GOT=$(basename "$iso") size=$((size/1048576))MB sha256=$sum"
+          else
+            echo "::error::ISO_GOT=нет ISO в out/"
+          fi
+
+      - name: Публикация ISO в релиз GitHub
+        if: ${{ success() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          iso=$(ls -1 out/*.iso | head -1)
+          base=$(basename "$iso")
+          tag="iso-${{ github.run_number }}-${{ steps.cfg.outputs.profile }}"
+          size=$(stat -c %s "$iso")
+          sum=$(cut -d' ' -f1 < "$iso.sha256")
+          limit=$((1900 * 1024 * 1024))
+          parts=()
+          if [ "$size" -gt "$limit" ]; then
+            echo "ISO $((size/1048576)) МБ — режем на части по 1900 МБ (лимит GitHub: 2 ГБ на файл релиза)"
+            split -b 1500M -d -a 2 "$iso" "out/$base.part"
+            parts=(out/"$base".part*)
+            { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл)."
+              echo
+              echo "Собрать образ (Linux/macOS):"
+              echo "  cat $base.part* > $base"
+              echo "  sha256sum -c $base.sha256"
+              echo
+              echo "Windows (PowerShell):"
+              echo "  cmd /c copy /b $base.part* $base"; } > out/JOIN-README.txt
+            parts+=(out/JOIN-README.txt)
+          else
+            parts=("$iso")
+          fi
+          parts+=("$iso.sha256")
+          if gh release create "$tag" \
+              --title "FlyArchOs ISO — ${{ steps.cfg.outputs.profile }} (run ${{ github.run_number }}, $(date -u +%F))" \
+              --notes "Автоматическая сборка FlyArchOs: Arch Linux + Hyprland + KDE Plasma, установщик Calamares, несколько обоев.
+
+          Профиль: **${{ steps.cfg.outputs.profile }}** ($((size/1048576)) МБ)
+          Запуск: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          Контрольная сумма: \`$sum\`" \
+              "${parts[@]}" > release.log 2>&1; then
+            echo "Релиз $tag опубликован"
+            echo "::error::RELEASE_OK=$tag частей=${#parts[@]}"
+            tail -3 release.log
+          else
+            # Без `| tee`: иначе статусом команды становится статус tee и
+            # ошибка публикации выглядит как успех.
+            tail -10 release.log
+            echo "::error::RELEASE_FAILED=$(tail -4 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-700)"
+          fi
+          sudo rm -f out/"$base".part* || true

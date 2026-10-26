@@ -14,11 +14,11 @@ qt6ct
 breeze
 breeze-gtk
 breeze-icons
-xcursor-breeze
 hicolor-icon-theme
 adwaita-icon-theme
 papirus-icon-theme
-arc-gtk-theme
+# ВАЖНО: arc-gtk-theme и xcursor-breeze живут только в AUR — здесь их нет.
+# Тема GTK и курсоры берутся из breeze (breeze-gtk, breeze).
 
 # Шрифты
 fontconfig

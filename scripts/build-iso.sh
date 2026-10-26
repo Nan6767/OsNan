@@ -2,7 +2,8 @@
 # ---------------------------------------------------------------------------
 # FlyArchOs — сборка ISO.
 #
-#   ./scripts/build-iso.sh            обычная сборка
+#   ./scripts/build-iso.sh                 обычная сборка (полный профиль)
+#   ./scripts/build-iso.sh --profile slim   компактный образ: оба окружения без доп. наборов
 #   ./scripts/build-iso.sh --aur      сначала собрать AUR-пакеты в локальный репозиторий
 #   ./scripts/build-iso.sh --clean    очистить рабочие каталоги перед сборкой
 #   ./scripts/build-iso.sh --check    только проверить окружение
@@ -23,6 +24,8 @@ AUR=0
 CLEAN=0
 ONLY_CHECK=0
 VERBOSE="-v"
+PROFILE_NAME="full"
+SLIM_GROUPS="core,common,hyprland,plasma,apps,live"
 
 log()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m==> ПРЕДУПРЕЖДЕНИЕ:\033[0m %s\n' "$*" >&2; }
@@ -35,6 +38,8 @@ usage() {
 while [ $# -gt 0 ]; do
     case "$1" in
         --aur)        AUR=1 ;;
+        --profile)    shift; PROFILE_NAME="${1:-full}" ;;
+        --profile=*)  PROFILE_NAME="${1#*=}" ;;
         --clean)      CLEAN=1 ;;
         --check)      ONLY_CHECK=1 ;;
         -q|--quiet)   VERBOSE="" ;;
@@ -72,15 +77,33 @@ if ! check_env; then
 fi
 [ "$ONLY_CHECK" = "1" ] && { log "Окружение в порядке."; exit 0; }
 
-# --- 2. список пакетов -----------------------------------------------------
-log "Генерация списка пакетов из groups/"
-python3 "$REPO_ROOT/scripts/gen-packages.py" --stats | sed 's/^/    /'
-python3 "$REPO_ROOT/scripts/gen-packages.py"
-
-# --- 3. локальный репозиторий AUR (по желанию) -----------------------------
+# --- 2. локальный репозиторий AUR (по желанию) -----------------------------
+# ВАЖНО: собираем ДО генерации списка — packages.aux формируется по факту
+# наличия пакетов в repo/x86_64.
 if [ "$AUR" = "1" ]; then
     log "Сборка AUR-пакетов в локальный репозиторий"
     "$REPO_ROOT/scripts/build-aur.sh" || warn "AUR-пакеты собраны не полностью — ISO соберётся без них"
+fi
+if [ -n "${AUR_ONLY:-}" ]; then
+    log "Сборка AUR-пакетов (выборочно): $AUR_ONLY"
+    # shellcheck disable=SC2086
+    "$REPO_ROOT/scripts/build-aur.sh" --with $AUR_ONLY || warn "AUR-пакеты собраны не полностью — ISO соберётся без них"
+fi
+
+# --- 3. список пакетов -----------------------------------------------------
+log "Генерация списка пакетов из groups/ (профиль: $PROFILE_NAME)"
+GEN_ARGS=()
+if [ "$PROFILE_NAME" = "slim" ]; then
+    GEN_ARGS=(--only-groups "$SLIM_GROUPS")
+fi
+if [ -n "${EXCLUDE_PKGS:-}" ]; then
+    GEN_ARGS+=(--exclude "$EXCLUDE_PKGS")
+fi
+python3 "$REPO_ROOT/scripts/gen-packages.py" --stats "${GEN_ARGS[@]}" | sed 's/^/    /'
+python3 "$REPO_ROOT/scripts/gen-packages.py" "${GEN_ARGS[@]}"
+
+if ! grep -q '^calamares$' profile/packages.x86_64 profile/packages.aux 2>/dev/null; then
+    warn "Calamares не попал в образ (нет в репозиториях или не собран из AUR) — установщика в ISO не будет"
 fi
 
 # --- 4. рабочий профиль ----------------------------------------------------
@@ -130,6 +153,14 @@ done
 # так профиль не сломается на другой версии archiso.
 if [ "$RELBUILT" = "1" ] && [ -f "$RELENG/profiledef.sh" ]; then
     RELENG_BOOTMODES=$(bash -c "unset bootmodes; . '$RELENG/profiledef.sh' >/dev/null 2>&1 || true; printf \"'%s' \" \"\${bootmodes[@]}\"" || true)
+    # Устаревшие имена (.mbr/.eltorito/.esp) из releng не берём — они только
+    # заваливают вывод предупреждениями и требуют лишние пакеты.
+    case "$RELENG_BOOTMODES" in
+        *.mbr*|*.eltorito*|*.esp*)
+            log "  в releng устаревшие bootmodes — оставляю свои"
+            RELENG_BOOTMODES=""
+            ;;
+    esac
     if [ -n "${RELENG_BOOTMODES// /}" ]; then
         log "  bootmodes из releng: ${RELENG_BOOTMODES}"
         python3 - "$WORK/profile/profiledef.sh" "$RELENG_BOOTMODES" <<'PY'
@@ -142,14 +173,29 @@ PY
     fi
 fi
 
+# --- 7b. slim: скрываем в установщике наборы, которых нет в образе --------
+if [ "$PROFILE_NAME" = "slim" ]; then
+    log "Профиль slim: убираем страницу «Наборы ПО» из установщика"
+    python3 - "$WORK/profile/airootfs/etc/calamares/settings.conf" <<'PY'
+import re, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+text = re.sub(r"^[ \t]*- packagechooser@extras\n", "", text, flags=re.M)
+open(path, "w", encoding="utf-8").write(text)
+PY
+    echo "slim" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"
+fi
+
 # --- 8. проверка дерева ----------------------------------------------------
 log "Проверка дерева (scripts/check.py)"
 python3 "$REPO_ROOT/scripts/check.py" || warn "проверка нашла замечания — смотрите вывод выше"
 
 # --- 9. сборка -------------------------------------------------------------
-log "Запуск mkarchiso (это надолго: ставится ~700 пакетов)"
+log "Запуск mkarchiso (это надолго: ставится много пакетов)"
+df -h "$REPO_ROOT" | tail -1
 start=$(date +%s)
 mkarchiso $VERBOSE -w "$WORK" -o "$OUT" "$WORK/profile"
+df -h "$REPO_ROOT" | tail -1
 
 iso=$(ls -1t "$OUT"/*.iso 2>/dev/null | head -n1 || true)
 [ -n "$iso" ] || die "mkarchiso не создал ISO (проверьте вывод выше)"

@@ -1,0 +1,67 @@
+name: Release probe
+
+# Вспомогательный запуск: проверяет полный сценарий публикации ISO —
+# нарезку файла размером с образ на части и загрузку их в релиз GitHub
+# (лимит релиза: 2 ГБ на файл). Логи Actions извне недоступны, поэтому
+# результат передаём аннотациями.
+#
+# Запуск: допишите любую строку в RELEASE_PROBE.txt и запушьте.
+on:
+  push:
+    paths:
+      - "RELEASE_PROBE.txt"
+
+jobs:
+  probe:
+    name: probe
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Место на диске
+        run: df -h /
+
+      - name: "Полный сценарий: файл 7.6 ГБ, нарезка, загрузка"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          tag="probe-${{ github.run_number }}"
+          mkdir -p out
+          head -c 7600M /dev/zero > out/flyarchos-1.0.0-x86_64.iso
+          iso=out/flyarchos-1.0.0-x86_64.iso
+          base=$(basename "$iso")
+          sha256sum "$iso" | sed "s|out/||" > "$iso.sha256"
+          size=$(stat -c %s "$iso")
+          sum=$(cut -d' ' -f1 < "$iso.sha256")
+          echo "::error::PROBE_SIZE=$((size/1048576))MB"
+
+          split -b 1500M -d -a 2 "$iso" "out/$base.part" || echo "::error::PROBE_SPLIT_FAIL=$?"
+          ls -lh out/ | head -12
+          parts=()
+          shopt -s nullglob
+          parts=(out/"$base".part*)
+          shopt -u nullglob
+          echo "::error::PROBE_PARTS=${#parts[@]}"
+
+          echo "инструкция" > out/JOIN-README.txt
+          parts+=(out/JOIN-README.txt)
+          parts+=("$iso.sha256")
+
+          start=$(date +%s)
+          if gh release create "$tag" --title "probe" --notes "probe $sum" "${parts[@]}" > release.log 2>&1; then
+            echo "::error::PROBE_UPLOAD_OK=$(( $(date +%s) - start )) сек, частей ${#parts[@]}"
+          else
+            echo "::error::PROBE_UPLOAD_FAIL=$(tail -6 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-900)"
+          fi
+          df -h / | tail -1
+
+      - name: Уборка
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "probe-${{ github.run_number }}" --yes >/dev/null 2>&1 || true
+          git push origin ":refs/tags/probe-${{ github.run_number }}" >/dev/null 2>&1 || true

@@ -4,8 +4,10 @@
 # (см. /usr/lib/flyarchos/profile_tool.py --remove-live).
 # ---------------------------------------------------------------------------
 
-# Графический установщик
-calamares
+# Графический установщик.
+# Calamares отсутствует в официальных репозиториях Arch — только AUR.
+# Он указан в groups/aur.txt и попадает в ISO, если собран локальный
+# репозиторий:  ./scripts/build-aur.sh --with calamares   (или make aur).
 
 # Альтернативный консольный установщик на случай проблем с Calamares
 archinstall
@@ -13,3 +15,13 @@ archinstall
 # Утилиты live-сессии (спасение системы/дисков)
 clonezilla
 testdisk
+
+# Загрузчики и сервисные меню самого ISO (mkarchiso требует их явно):
+#   syslinux       — загрузка в режиме BIOS;
+#   edk2-shell     — UEFI-шелл как запасной вариант загрузки;
+#   memtest86+     — проверка памяти из меню BIOS;
+#   memtest86+-efi — то же самое для UEFI.
+syslinux
+edk2-shell
+memtest86+
+memtest86+-efi

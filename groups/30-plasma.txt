@@ -4,7 +4,9 @@
 
 # Само окружение
 plasma-meta
-plasma-wayland-session
+# Wayland-сессия Plasma поставляется самим plasma-workspace (пакет
+# plasma-wayland-session удалён из репозиториев Arch); X11-сессия с Plasma 6.8
+# больше не существует, поэтому plasma-x11-session здесь тоже нет.
 plasma-workspace-wallpapers
 plasma-nm
 plasma-pa
