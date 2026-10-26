@@ -163,6 +163,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # out/ создан контейнером от root: runner не может писать туда
+          # части ISO, поэтому возвращаем владельца и режем в свой каталог.
+          sudo chown -R "$(id -un)" out || true
+          mkdir -p release-parts
           iso=$(ls -1 out/*.iso | head -1)
           base=$(basename "$iso")
           tag="iso-${{ github.run_number }}-${{ steps.cfg.outputs.profile }}"
@@ -172,8 +176,8 @@ jobs:
           parts=()
           if [ "$size" -gt "$limit" ]; then
             echo "ISO $((size/1048576)) МБ — режем на части по 1500 МБ (лимит GitHub: 2 ГБ на файл релиза)"
-            split -b 1500M -d -a 2 "$iso" "out/$base.part"
-            parts=(out/"$base".part*)
+            split -b 1500M -d -a 2 "$iso" "release-parts/$base.part"
+            parts=(release-parts/"$base".part*)
             { echo "FlyArchOs ISO разбит на части (лимит GitHub — 2 ГБ на файл)."
               echo
               echo "Собрать образ (Linux/macOS):"
@@ -181,8 +185,8 @@ jobs:
               echo "  sha256sum -c $base.sha256"
               echo
               echo "Windows (PowerShell):"
-              echo "  cmd /c copy /b $base.part* $base"; } > out/JOIN-README.txt
-            parts+=(out/JOIN-README.txt)
+              echo "  cmd /c copy /b $base.part* $base"; } > release-parts/JOIN-README.txt
+            parts+=(release-parts/JOIN-README.txt)
           else
             parts=("$iso")
           fi
@@ -204,4 +208,4 @@ jobs:
             tail -10 release.log
             echo "::error::RELEASE_FAILED=$(tail -4 release.log | tr '\n' '~' | sed 's/%/%25/g; s/::/../g' | cut -c1-700)"
           fi
-          sudo rm -f out/"$base".part* || true
+          sudo rm -f release-parts/"$base".part* || true

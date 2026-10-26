@@ -76,6 +76,17 @@ rm -f /var/lib/systemd/random-seed || true
 if [ "$(cat /usr/share/flyarchos/profile-variant 2>/dev/null)" = "mini" ]; then
     echo "==> [mini] Урезание документации и локалей"
     rm -f /boot/initramfs-*-fallback.img 2>/dev/null || true
+    # Прошивки ARM SoC и серверных сетевых карт на x86_64 не нужны
+    rm -rf /usr/lib/firmware/qcom /usr/lib/firmware/mellanox 2>/dev/null || true
+    # Шрифты редких письменностей (остаются латиница, кириллица, символы и моно)
+    for f in /usr/share/fonts/noto/NotoSans[A-Z]*.ttf /usr/share/fonts/noto/NotoSerif[A-Z]*.ttf; do
+        [ -e "$f" ] || continue
+        case "$(basename "$f")" in
+            NotoSansDisplay*|NotoSansMono*|NotoSansSymbols*|NotoSansMath*) : ;;
+            *) rm -f "$f" ;;
+        esac
+    done
+    fc-cache -f >/dev/null 2>&1 || true
     rm -rf /usr/share/doc /usr/share/gtk-doc /usr/share/info /usr/share/man 2>/dev/null || true
     for d in /usr/share/locale/*/; do
         case "$(basename "$d")" in
