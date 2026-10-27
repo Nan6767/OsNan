@@ -181,7 +181,7 @@ if [ "$PROFILE_NAME" = "slim" ] || [ "$PROFILE_NAME" = "mini" ]; then
 import re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-text = re.sub(r"^[ \t]*- packagechooser@extras\n", "", text, flags=re.M)
+text = re.sub(r"^[ \t]*- packagechooser@(extras|preset)\n", "", text, flags=re.M)
 open(path, "w", encoding="utf-8").write(text)
 PY
     echo "$PROFILE_NAME" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"

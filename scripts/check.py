@@ -226,7 +226,7 @@ def check_packagechooser_groups(report: Report) -> None:
         data = load_yaml(path)
         for item in data.get("items", []):
             ident = item["id"]
-            if path.name.endswith("bootloader.conf"):
+            if path.name.endswith(("bootloader.conf", "preset.conf")):
                 continue
             if ident in ("both", ""):
                 continue

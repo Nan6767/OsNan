@@ -15,12 +15,14 @@ say "=== финализация $(date -Is) ==="
 
 # --- 1. Что выбрал пользователь -------------------------------------------
 DESKTOP="both"
+PRESET="custom"
 EXTRAS=""
 if [ -f "$STATE" ] && command -v python3 >/dev/null 2>&1; then
     DESKTOP=$(python3 -c "import json;print(json.load(open('$STATE')).get('desktop','both'))" 2>/dev/null || echo both)
+    PRESET=$(python3 -c "import json;print(json.load(open('$STATE')).get('preset','custom'))" 2>/dev/null || echo custom)
     EXTRAS=$(python3 -c "import json;print(', '.join(json.load(open('$STATE')).get('extras',[])))" 2>/dev/null || echo "")
 fi
-say "Окружение: $DESKTOP; наборы: ${EXTRAS:-нет}"
+say "Окружение: $DESKTOP; сценарий: $PRESET; наборы: ${EXTRAS:-нет}"
 
 # --- 2. Обои по умолчанию --------------------------------------------------
 case "$DESKTOP" in
@@ -205,6 +207,7 @@ rm -f /root/.bash_history
     echo "FlyArchOs — установка завершена"
     echo "  Дата:          $(date -Is)"
     echo "  Окружение:     $DESKTOP"
+    echo "  Сценарий:      $PRESET"
     echo "  Наборы ПО:     ${EXTRAS:-не выбраны}"
     echo "  Файрвол UFW:   $FIREWALL"
     echo "  Ядро:          $(uname -r)"

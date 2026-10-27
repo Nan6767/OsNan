@@ -19,6 +19,14 @@
 #   flyarchos-exe uninstall            удаление установленных программ
 #   flyarchos-exe kill                 остановить зависшие процессы Wine
 #
+# «Бутылки» — отдельные окружения Wine под разные программы и игры
+# (свои настройки, свои установленные программы, удаляется целиком):
+#   flyarchos-exe bottle                 список бутылок
+#   flyarchos-exe bottle create <имя>    новая бутылка
+#   flyarchos-exe bottle remove <имя>    удалить бутылку целиком
+#   flyarchos-exe --bottle <имя> run …   любая команда в выбранной бутылке
+#                                        (или переменная FLYARCHOS_WINE_BOTTLE)
+#
 # Для игр из Steam удобнее Proton внутри Steam; flyarchos-exe — про
 # обычные программы и отдельные .exe «с флешки».
 
@@ -31,6 +39,7 @@ export WINEARCH=win64
 [ "${FLYARCHOS_WINE_DEBUG:-0}" = "1" ] || export WINEDEBUG="${WINEDEBUG:--all}"
 
 STATE_DIR="$HOME/.local/state/flyarchos"
+BOTTLES_DIR="${FLYARCHOS_BOTTLES_DIR:-$HOME/.local/share/flyarchos/bottles}"
 WINE_PKGS="wine wine-mono wine-gecko winetricks icoutils cabextract"
 
 say()  { printf '%s\n' "$*"; }
@@ -50,6 +59,10 @@ usage() {
   flyarchos-exe config               настройки Wine (winecfg)
   flyarchos-exe uninstall            удалить установленную программу
   flyarchos-exe kill                 остановить процессы Wine
+  flyarchos-exe bottle [list]        бутылки: отдельные окружения Wine
+  flyarchos-exe bottle create <имя>  новая бутылка (под игру/программу)
+  flyarchos-exe bottle remove <имя>  удалить бутылку целиком
+  flyarchos-exe --bottle <имя> …     выполнить команду в выбранной бутылке
 EOF
 }
 
@@ -62,7 +75,11 @@ open_terminal_setup() {
     local t
     for t in kitty konsole xterm; do
         if command -v "$t" >/dev/null 2>&1; then
-            exec "$t" -e "$0" setup
+            if [ -n "${BOTTLE:-}" ]; then
+                exec "$t" -e "$0" --bottle "$BOTTLE" setup
+            else
+                exec "$t" -e "$0" setup
+            fi
         fi
     done
     return 1
@@ -99,6 +116,33 @@ init_prefix() {
     prefix_ready
 }
 
+# Необязательные компоненты: шрифты Windows и DXVK для игр (нужен интернет).
+# $1 = --yes: без вопроса.
+setup_components() {
+    local yes="${1:-}"
+    command -v winetricks >/dev/null 2>&1 || return 0
+    local tricks=1 ans
+    if [ -z "$yes" ]; then
+        printf 'Поставить шрифты Windows и DXVK для игр? (нужен интернет) [Y/n] '
+        read -r ans || ans=n
+        case "$ans" in ""|y|Y|yes|Yes|д|Д) : ;; *) tricks=0 ;; esac
+    fi
+    [ "$tricks" = "1" ] || return 0
+    say "winetricks: corefonts…"
+    if winetricks -q corefonts >>"$STATE_DIR/wine-setup.log" 2>&1; then
+        say "  шрифты готовы"
+    else
+        warn "  corefonts не поставились (сеть?) — лог: $STATE_DIR/wine-setup.log"
+    fi
+    say "winetricks: dxvk (DirectX 9–11 через Vulkan, для игр)…"
+    if winetricks -q dxvk >>"$STATE_DIR/wine-setup.log" 2>&1; then
+        say "  DXVK готов"
+    else
+        warn "  DXVK не поставился (сеть?) — программы пойдут и так, играм будет медленнее"
+    fi
+}
+
+
 cmd_setup() {
     local yes=""
     case "${1:-}" in --yes|-y) yes="--yes" ;; esac
@@ -108,28 +152,7 @@ cmd_setup() {
         return 1
     fi
     say "Wine: $(wine --version 2>/dev/null); префикс готов."
-    if command -v winetricks >/dev/null 2>&1; then
-        local tricks=1 ans
-        if [ -z "$yes" ]; then
-            printf 'Поставить шрифты Windows и DXVK для игр? (нужен интернет) [Y/n] '
-            read -r ans || ans=n
-            case "$ans" in ""|y|Y|yes|Yes|д|Д) : ;; *) tricks=0 ;; esac
-        fi
-        if [ "$tricks" = "1" ]; then
-            say "winetricks: corefonts…"
-            if winetricks -q corefonts >>"$STATE_DIR/wine-setup.log" 2>&1; then
-                say "  шрифты готовы"
-            else
-                warn "  corefonts не поставились (сеть?) — лог: $STATE_DIR/wine-setup.log"
-            fi
-            say "winetricks: dxvk (DirectX 9–11 через Vulkan, для игр)…"
-            if winetricks -q dxvk >>"$STATE_DIR/wine-setup.log" 2>&1; then
-                say "  DXVK готов"
-            else
-                warn "  DXVK не поставился (сеть?) — программы пойдут и так, играм будет медленнее"
-            fi
-        fi
-    fi
+    setup_components "$yes"
     say "Готово! Дальше:"
     say "  · двойной клик по .exe в файловом менеджере — запуск"
     say "  · flyarchos-exe install <установщик.exe> — поставить программу"
@@ -236,7 +259,7 @@ cmd_shortcut() {
 Type=Application
 Name=$name (Wine)
 Comment=Windows-программа через Wine (FlyArchOs)
-Exec=flyarchos-exe run "$file"
+Exec=flyarchos-exe ${BOTTLE:+--bottle $BOTTLE }run "$file"
 Icon=$icon
 Terminal=false
 Categories=Utility;
@@ -246,6 +269,116 @@ EOF
     say "Ярлык создан: $desktop (ищите «$name (Wine)» в меню приложений)"
 }
 
+# --- «бутылки»: отдельные окружения Wine -----------------------------------
+
+valid_bottle_name() {
+    case "${1:-}" in
+        ""|.|..) return 1 ;;
+        *[!A-Za-z0-9._-]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+# Путь префикса бутылки по имени (default — обычное окружение FlyArchOs).
+bottle_path() {
+    if [ "${1:-default}" = "default" ]; then
+        printf '%s' "${FLYARCHOS_WINEPREFIX:-$HOME/.local/share/flyarchos/wineprefix}"
+    else
+        printf '%s/%s' "$BOTTLES_DIR" "$1"
+    fi
+}
+
+bottle_state() {
+    if [ -f "$1/system.reg" ]; then
+        printf 'готов, %s' "$(du -sh "$1" 2>/dev/null | cut -f1)"
+    else
+        printf 'не создан'
+    fi
+}
+
+list_bottles() {
+    local p d
+    p="$(bottle_path default)"
+    printf '  %-16s %s (%s)
+' "default" "$p" "$(bottle_state "$p")"
+    if [ -d "$BOTTLES_DIR" ]; then
+        for d in "$BOTTLES_DIR"/*/; do
+            [ -d "$d" ] || continue
+            printf '  %-16s %s (%s)
+' "$(basename "$d")" "${d%/}" "$(bottle_state "${d%/}")"
+        done
+    fi
+}
+
+cmd_bottle() {
+    local sub="${1:-list}"
+    [ $# -gt 0 ] && shift
+    case "$sub" in
+        list)
+            say "Бутылки Wine (текущая: ${BOTTLE:-default}):"
+            list_bottles
+            say "Создать: flyarchos-exe bottle create <имя>"
+            say "Использовать: flyarchos-exe --bottle <имя> <команда>"
+            ;;
+        create)
+            local name="${1:-}" yes=""
+            case "${2:-}" in --yes|-y) yes="--yes" ;; esac
+            if [ "$name" = "default" ]; then
+                warn "бутылка default — основное окружение; готовится командой: flyarchos-exe setup"
+                return 2
+            fi
+            if ! valid_bottle_name "$name"; then
+                warn "недопустимое имя бутылки: '${name:-<не задано>}' (разрешены буквы, цифры, . _ -)"
+                return 2
+            fi
+            PREFIX="$(bottle_path "$name")"
+            export WINEPREFIX="$PREFIX"
+            BOTTLE="$name"
+            if prefix_ready; then
+                say "Бутылка '$name' уже существует: $PREFIX"
+                return 0
+            fi
+            ensure_wine "$yes" || return 1
+            mkdir -p "$BOTTLES_DIR"
+            init_prefix || { warn "не удалось создать бутылку, подробности: $STATE_DIR/wine-setup.log"; return 1; }
+            say "Бутылка '$name' создана: $PREFIX"
+            setup_components "$yes"
+            say "Дальше: flyarchos-exe --bottle $name install <setup.exe>"
+            ;;
+        remove)
+            local name="${1:-}" ans path
+            if [ "$name" = "default" ]; then
+                warn "default этой командой не удаляю (основное окружение). Вручную: rm -rf "$(bottle_path default)""
+                return 2
+            fi
+            if ! valid_bottle_name "$name"; then
+                warn "недопустимое имя бутылки: '${name:-<не задано>}'"
+                return 2
+            fi
+            path="$(bottle_path "$name")"
+            [ -d "$path" ] || { warn "бутылки '$name' нет"; return 1; }
+            if [ "${2:-}" != "--yes" ]; then
+                printf 'Удалить бутылку %s (%s) целиком? [y/N] ' "$name" "$path"
+                read -r ans || ans=n
+                case "$ans" in
+                    y|Y|yes|Yes|д|Д) : ;;
+                    *) say "Отменено."; return 0 ;;
+                esac
+            fi
+            if command -v wineserver >/dev/null 2>&1; then
+                WINEPREFIX="$path" wineserver -k 2>/dev/null || true
+            fi
+            rm -rf "$path"
+            say "Бутылка '$name' удалена."
+            ;;
+        *)
+            warn "неизвестная подкоманда bottle: $sub (доступно: list, create, remove)"
+            return 2
+            ;;
+    esac
+}
+
+
 status() {
     say "FlyArchOs — Windows-программы (.exe/.msi) через Wine"
     if have_wine; then
@@ -253,6 +386,7 @@ status() {
     else
         say "  Wine:    не установлен — flyarchos-exe setup поставит всё нужное"
     fi
+    say "  Бутылка: ${BOTTLE:-default} (flyarchos-exe bottle — список и создание)"
     if prefix_ready; then
         say "  Префикс: $PREFIX (готов, $(du -sh "$PREFIX" 2>/dev/null | cut -f1))"
         say "  Программ установлено: $(list_programs | grep -c . || true)"
@@ -262,6 +396,25 @@ status() {
     say
     usage
 }
+
+# Глобальная опция --bottle <имя> (или переменная FLYARCHOS_WINE_BOTTLE):
+# выполнить команду в отдельном окружении Wine.
+BOTTLE="${FLYARCHOS_WINE_BOTTLE:-}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --bottle|-b) BOTTLE="${2:-}"; shift 2 ;;
+        --bottle=*)  BOTTLE="${1#--bottle=}"; shift ;;
+        *) break ;;
+    esac
+done
+if [ -n "$BOTTLE" ]; then
+    if ! valid_bottle_name "$BOTTLE"; then
+        warn "недопустимое имя бутылки: '$BOTTLE' (разрешены буквы, цифры, . _ -)"
+        exit 2
+    fi
+    PREFIX="$(bottle_path "$BOTTLE")"
+    export WINEPREFIX="$PREFIX"
+fi
 
 ACTION="${1:-status}"
 [ $# -gt 0 ] && shift
@@ -286,6 +439,7 @@ case "$ACTION" in
                    warn "Wine не установлен — останавливать нечего."
                    exit 1
                fi ;;
+    bottle)    cmd_bottle "$@" ;;
     status|-h|--help) status ;;
     *) warn "неизвестное действие: $ACTION"; usage >&2; exit 2 ;;
 esac
