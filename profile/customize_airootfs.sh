@@ -62,6 +62,7 @@ ln -sf /usr/lib/flyarchos/flyarchos-snapshot /usr/bin/flyarchos-snapshot
 ln -sf /usr/lib/flyarchos/backup_tool.py /usr/bin/flyarchos-backup
 ln -sf /usr/lib/flyarchos/flyarchos-clean /usr/bin/flyarchos-clean
 ln -sf /usr/lib/flyarchos/flyarchos-aur /usr/bin/flyarchos-aur
+ln -sf /usr/lib/flyarchos/flyarchos-exe /usr/bin/flyarchos-exe
 
 # Фирменный os-release: кладём после pacstrap, иначе pacman падает на
 # конфликте с файлом пакета filesystem (проверено сборкой №22).

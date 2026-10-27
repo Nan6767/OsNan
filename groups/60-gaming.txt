@@ -8,6 +8,8 @@ wine
 wine-gecko
 wine-mono
 winetricks
+icoutils
+cabextract
 gamemode
 lib32-gamemode
 mangohud

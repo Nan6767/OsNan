@@ -421,6 +421,7 @@ def check_installer_scripts(report: Report) -> None:
         "backup_tool.py",
         "flyarchos-clean",
         "flyarchos-aur",
+        "flyarchos-exe",
     ]
     missing = []
     non_exec = []

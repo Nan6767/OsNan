@@ -73,6 +73,8 @@ cat <<'EOF'
   flyarchos-backup           инкрементная копия домашнего каталога
   flyarchos-backup auto      ежедневный автобэкап: auto on|off|status
   flyarchos-aur              yay для AUR: install / update / статус
+  flyarchos-exe              Windows-программы (.exe/.msi) через Wine:
+                             setup, run, install, list, shortcut
   flyarchos-clean            уборка: кэш пакетов, журнал, миниатюры
   flyarchos-info --keys      все горячие клавиши Hyprland
 EOF

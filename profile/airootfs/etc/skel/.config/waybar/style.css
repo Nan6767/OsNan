@@ -69,6 +69,7 @@ tooltip {
 }
 
 #custom-weather,
+#custom-temp,
 #custom-clipboard,
 #custom-nightlight {
     color: #a5f3fc;
@@ -79,6 +80,7 @@ tooltip {
 }
 
 #custom-weather:hover,
+#custom-temp:hover,
 #custom-clipboard:hover,
 #custom-nightlight:hover {
     background: rgba(34, 211, 238, 0.30);

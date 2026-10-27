@@ -342,5 +342,31 @@ class DoctorSecurityTest(unittest.TestCase):
         self.assertGreaterEqual(doc.count("check_security()"), 2)
 
 
+class WineToolTest(unittest.TestCase):
+    """flyarchos-exe: интеграция .exe в систему и аккуратные коды возврата."""
+
+    def _run_tool(self, *args):
+        import subprocess
+
+        exe = REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "flyarchos-exe"
+        return subprocess.run(["bash", str(exe), *args],
+                              capture_output=True, text=True, timeout=30)
+
+    def test_bogus_action_returns_2(self):
+        self.assertEqual(self._run_tool("bogus").returncode, 2)
+
+    def test_missing_file_returns_1(self):
+        self.assertEqual(self._run_tool("run", "/definitely/not/here.exe").returncode, 1)
+
+    def test_desktop_and_mimeapps(self):
+        desk = (REPO / "profile" / "airootfs" / "usr" / "share" / "applications"
+                / "flyarchos-exe.desktop").read_text(encoding="utf-8")
+        self.assertIn("application/x-ms-dos-executable", desk)
+        self.assertIn("Exec=flyarchos-exe run %f", desk)
+        mime = (REPO / "profile" / "airootfs" / "etc" / "xdg"
+                / "mimeapps.list").read_text(encoding="utf-8")
+        self.assertIn("application/x-ms-dos-executable=flyarchos-exe.desktop", mime)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

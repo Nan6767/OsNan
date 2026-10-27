@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/updates", "custom/weather", "custom/clipboard", "custom/nightlight", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
+    "modules-right": ["custom/updates", "custom/weather", "custom/temp", "custom/clipboard", "custom/nightlight", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -74,6 +74,13 @@
         "tooltip": true,
         "tooltip-format": "Погода по IP (wttr.in). Клик — подробный прогноз",
         "on-click": "kitty --hold -e curl -s 'https://wttr.in/?lang=ru'"
+    },
+    "custom/temp": {
+        "exec": "for z in /sys/class/thermal/thermal_zone*; do if [ \"$(cat $z/type 2>/dev/null)\" = \"x86_pkg_temp\" ]; then t=$(cat $z/temp 2>/dev/null); [ -n \"$t\" ] && echo \"$((t/1000))°C\"; exit 0; fi; done; true",
+        "interval": 5,
+        "hide-if-empty": true,
+        "tooltip": true,
+        "tooltip-format": "Температура процессора"
     },
     "custom/clipboard": {
         "format": "",
