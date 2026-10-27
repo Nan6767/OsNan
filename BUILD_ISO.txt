@@ -15,8 +15,8 @@
 #          второе ядро, компиляторы, тяжёлые шрифты и мессенджеры.
 #
 # Готовый ISO — в артефактах запуска (90 дней) и в релизе GitHub.
-profile=full
-profile=full
+profile=mini
+profile=mini
 # запрос сборки 2026-10-25T21:42:13Z
 # ещё одна попытка 2026-10-25T21:46:30Z
 # попытка 2026-10-25T21:50:17Z
@@ -39,3 +39,4 @@ trigger: 1.3.0-beta mini
 trigger: 1.3.0-beta mini (os-release fix)
 trigger: 1.4.0-beta mini
 trigger: 1.4.0-beta full
+trigger: 1.5.0-beta mini
