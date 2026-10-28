@@ -465,6 +465,9 @@ class LiveSessionTest(unittest.TestCase):
         hook = (self.AI / "etc" / "pacman.d" / "hooks"
                 / "flyarchos-live-setup.hook").read_text(encoding="utf-8")
         self.assertIn("live-setup.sh", hook)
+        setup = (self.AI / "usr" / "lib" / "flyarchos"
+                 / "live-setup.sh").read_text(encoding="utf-8")
+        self.assertIn("localedef", setup)  # locale.gen бывает пустым
         sudoers = (self.AI / "etc" / "sudoers.d"
                    / "10-flyarchos-live").read_text(encoding="utf-8")
         self.assertIn("NOPASSWD", sudoers)

@@ -14,9 +14,14 @@ MARKER=/etc/flyarchos-live-setup.done
 [ -e "$MARKER" ] && exit 0
 
 # Пакет glibc не несёт собранных локалей — генерируем en_US и ru_RU,
-# чтобы live-сессия сразу была русской.
-sed -i 's/^#\(en_US\.UTF-8\)/\1/; s/^#\(ru_RU\.UTF-8\)/\1/' /etc/locale.gen 2>/dev/null || true
-locale-gen >/dev/null 2>&1 || true
+# чтобы live-сессия сразу была русской. В современном glibc файл
+# /etc/locale.gen может не содержать готовых строк, поэтому добавляем
+# их явно и собираем локали напрямую через localedef.
+for loc in en_US ru_RU; do
+    grep -qx "${loc}.UTF-8 UTF-8" /etc/locale.gen 2>/dev/null \
+        || echo "${loc}.UTF-8 UTF-8" >> /etc/locale.gen 2>/dev/null || true
+    localedef -i "${loc}" -f UTF-8 "${loc}.UTF-8" 2>/dev/null || true
+done
 
 # Фирменный os-release: заменяем файл пакета filesystem после установки.
 install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release 2>/dev/null || true
