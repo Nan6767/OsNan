@@ -15,12 +15,14 @@ say "=== финализация $(date -Is) ==="
 
 # --- 1. Что выбрал пользователь -------------------------------------------
 DESKTOP="both"
+PRESET="custom"
 EXTRAS=""
 if [ -f "$STATE" ] && command -v python3 >/dev/null 2>&1; then
     DESKTOP=$(python3 -c "import json;print(json.load(open('$STATE')).get('desktop','both'))" 2>/dev/null || echo both)
+    PRESET=$(python3 -c "import json;print(json.load(open('$STATE')).get('preset','custom'))" 2>/dev/null || echo custom)
     EXTRAS=$(python3 -c "import json;print(', '.join(json.load(open('$STATE')).get('extras',[])))" 2>/dev/null || echo "")
 fi
-say "Окружение: $DESKTOP; наборы: ${EXTRAS:-нет}"
+say "Окружение: $DESKTOP; сценарий: $PRESET; наборы: ${EXTRAS:-нет}"
 
 # --- 2. Обои по умолчанию --------------------------------------------------
 case "$DESKTOP" in
@@ -166,6 +168,25 @@ for unit in NetworkManager.service sddm.service bluetooth.service systemd-timesy
     run systemctl enable "$unit"
 done
 
+# --- 6б. Файрвол для набора «Приватность» ---------------------------------
+FIREWALL="не установлен"
+if command -v ufw >/dev/null 2>&1; then
+    FIREWALL="установлен, выключен (sudo systemctl enable --now ufw)"
+    case "$EXTRAS" in
+        *privacy*)
+            say "Файрвол UFW: включаю (набор «Приватность»)"
+            if [ -f /etc/ufw/ufw.conf ]; then
+                sed -i 's/^ENABLED=no/ENABLED=yes/' /etc/ufw/ufw.conf
+            fi
+            if [ -f /etc/default/ufw ]; then
+                sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/; s/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/; s/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="DROP"/' /etc/default/ufw
+            fi
+            run systemctl enable ufw.service
+            FIREWALL="включён (входящие запрещены, исходящие разрешены)"
+            ;;
+    esac
+fi
+
 # --- 7. Первый вход: одноразовый помощник ---------------------------------
 install -d -m 755 /etc/skel/.config/flyarchos
 if [ -f /etc/skel/.config/flyarchos/welcome-done ]; then
@@ -186,7 +207,9 @@ rm -f /root/.bash_history
     echo "FlyArchOs — установка завершена"
     echo "  Дата:          $(date -Is)"
     echo "  Окружение:     $DESKTOP"
+    echo "  Сценарий:      $PRESET"
     echo "  Наборы ПО:     ${EXTRAS:-не выбраны}"
+    echo "  Файрвол UFW:   $FIREWALL"
     echo "  Ядро:          $(uname -r)"
     echo
     echo "Полезные команды:"

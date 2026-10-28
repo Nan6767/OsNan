@@ -1,0 +1,6 @@
+[Default Applications]
+# FlyArchOs: .exe/.msi открываются двойным кликом через flyarchos-exe (Wine)
+application/x-ms-dos-executable=flyarchos-exe.desktop
+application/x-msdownload=flyarchos-exe.desktop
+application/x-msi=flyarchos-exe.desktop
+application/x-ms-installer=flyarchos-exe.desktop

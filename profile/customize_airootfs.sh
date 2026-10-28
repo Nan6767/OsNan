@@ -61,6 +61,21 @@ ln -sf /usr/lib/flyarchos/theme_tool.py /usr/bin/flyarchos-theme
 ln -sf /usr/lib/flyarchos/flyarchos-snapshot /usr/bin/flyarchos-snapshot
 ln -sf /usr/lib/flyarchos/backup_tool.py /usr/bin/flyarchos-backup
 ln -sf /usr/lib/flyarchos/flyarchos-clean /usr/bin/flyarchos-clean
+ln -sf /usr/lib/flyarchos/flyarchos-aur /usr/bin/flyarchos-aur
+ln -sf /usr/lib/flyarchos/flyarchos-exe /usr/bin/flyarchos-exe
+
+# Фирменный os-release: кладём после pacstrap, иначе pacman падает на
+# конфликте с файлом пакета filesystem (проверено сборкой №22).
+install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release
+
+# Фон экрана входа: фирменные обои вместо стандартных у темы breeze
+if [ -f /usr/share/sddm/themes/breeze/theme.conf ]; then
+    if grep -q '^background=' /usr/share/sddm/themes/breeze/theme.conf; then
+        sed -i 's|^background=.*|background=/usr/share/backgrounds/flyarchos/default.jpg|' /usr/share/sddm/themes/breeze/theme.conf
+    else
+        printf '\nbackground=/usr/share/backgrounds/flyarchos/default.jpg\n' >> /usr/share/sddm/themes/breeze/theme.conf
+    fi
+fi
 
 echo "==> [7/9] Обои по умолчанию"
 install -d -m 755 /usr/share/backgrounds/flyarchos

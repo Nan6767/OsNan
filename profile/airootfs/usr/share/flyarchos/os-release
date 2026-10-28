@@ -1,0 +1,13 @@
+NAME="FlyArchOs"
+PRETTY_NAME="FlyArchOs 1.6.0-beta"
+ID=flyarchos
+ID_LIKE=arch
+VERSION="1.6.0-beta"
+VERSION_ID=1.6.0-beta
+VERSION_CODENAME=beta
+BUILD_ID=rolling
+HOME_URL="https://github.com/Nan6767/OsNan"
+DOCUMENTATION_URL="https://github.com/Nan6767/OsNan/blob/main/README.md"
+SUPPORT_URL="https://github.com/Nan6767/OsNan/issues"
+BUG_REPORT_URL="https://github.com/Nan6767/OsNan/issues"
+LOGO=flyarchos

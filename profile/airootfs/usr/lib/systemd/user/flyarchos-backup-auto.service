@@ -1,0 +1,8 @@
+[Unit]
+Description=FlyArchOs — ежедневная резервная копия домашнего каталога
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flyarchos-backup create --keep 7
+Nice=10
+IOSchedulingClass=idle

@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/updates", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
+    "modules-right": ["custom/updates", "custom/weather", "custom/temp", "custom/clipboard", "custom/nightlight", "tray", "pulseaudio", "network", "bluetooth", "battery", "clock2"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -66,6 +66,33 @@
         "hide-if-empty": true,
         "tooltip": false,
         "on-click": "kitty -e flyarchos-update"
+    },
+    "custom/weather": {
+        "exec": "curl -fs --max-time 5 'https://wttr.in/?format=%c%20%t' 2>/dev/null || true",
+        "interval": 1800,
+        "hide-if-empty": true,
+        "tooltip": true,
+        "tooltip-format": "Погода по IP (wttr.in). Клик — подробный прогноз",
+        "on-click": "kitty --hold -e curl -s 'https://wttr.in/?lang=ru'"
+    },
+    "custom/temp": {
+        "exec": "for z in /sys/class/thermal/thermal_zone*; do if [ \"$(cat $z/type 2>/dev/null)\" = \"x86_pkg_temp\" ]; then t=$(cat $z/temp 2>/dev/null); [ -n \"$t\" ] && echo \"$((t/1000))°C\"; exit 0; fi; done; true",
+        "interval": 5,
+        "hide-if-empty": true,
+        "tooltip": true,
+        "tooltip-format": "Температура процессора"
+    },
+    "custom/clipboard": {
+        "format": "",
+        "tooltip": true,
+        "tooltip-format": "История буфера обмена (Super+Shift+V)",
+        "on-click": "cliphist list | wofi --dmenu --prompt Буфер: | cliphist decode | wl-copy"
+    },
+    "custom/nightlight": {
+        "format": "",
+        "tooltip": true,
+        "tooltip-format": "Ночной режим — тёплый экран (Super+N)",
+        "on-click": "pkill hyprsunset || hyprsunset -t 4200"
     },
     "tray": {
         "icon-size": 18,

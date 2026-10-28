@@ -13,10 +13,10 @@ showDonateUrl: false
 
 strings:
     productName:         "FlyArchOs Linux"
-    version:             "1.0.0"
+    version:             "1.6.0-beta"
     shortVersion:        "1.0"
-    versionedName:       "FlyArchOs Linux 1.0.0"
-    shortVersionedName:  "FlyArchOs 1.0.0"
+    versionedName:       "FlyArchOs Linux 1.6.0 (бета)"
+    shortVersionedName:  "FlyArchOs 1.6.0-бета"
     shortProductName:    "FlyArchOs"
     bootloaderEntryName: "FlyArchOs"
     productUrl:          "https://github.com/Nan6767/OsNan"

@@ -106,6 +106,26 @@ def check_services() -> None:
         ok("упавших служб нет")
 
 
+def check_security() -> None:
+    title("Безопасность и бэкапы")
+    if shutil.which("ufw"):
+        active = (run(["systemctl", "is-active", "ufw.service"]) or "").strip()
+        enabled = (run(["systemctl", "is-enabled", "ufw.service"]) or "").strip()
+        if active == "active" or enabled == "enabled":
+            ok("файрвол UFW включён")
+        else:
+            warn("UFW установлен, но файрвол выключен",
+                 "включить: sudo systemctl enable --now ufw.service")
+    timer = Path("/usr/lib/systemd/user/flyarchos-backup-auto.timer")
+    if timer.is_file():
+        state = (run(["systemctl", "--user", "is-active",
+                      "flyarchos-backup-auto.timer"]) or "").strip()
+        if state == "active":
+            ok("автобэкап включён (копия дома раз в день)")
+        else:
+            say("  · автобэкап выключен — включить: flyarchos-backup auto on")
+
+
 def check_journal() -> None:
     title("Журнал (ошибки текущей загрузки)")
     out = run(["journalctl", "-b", "-p", "err", "--no-pager", "--output=cat"], timeout=30)
@@ -187,6 +207,7 @@ def main() -> int:
     check_system()
     check_disk()
     check_services()
+    check_security()
     check_journal()
     check_packages(args.fast)
     check_network_audio_video()

@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 323
+# Всего пакетов: 326
 # Профиль:  (группы: )
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -286,13 +286,15 @@ dnsmasq
 virtualbox
 virtualbox-host-dkms
 
-# --- gaming (60-gaming.txt): 25 шт. --------------------
+# --- gaming (60-gaming.txt): 27 шт. --------------------
 steam
 lutris
 wine
 wine-gecko
 wine-mono
 winetricks
+icoutils
+cabextract
 gamemode
 lib32-gamemode
 mangohud
@@ -336,7 +338,7 @@ pdfarranger
 zathura
 zathura-pdf-mupdf
 
-# --- privacy (85-privacy.txt): 7 шт. --------------------
+# --- privacy (85-privacy.txt): 8 шт. --------------------
 tor
 torbrowser-launcher
 onionshare
@@ -344,6 +346,7 @@ veracrypt
 metadata-cleaner
 firejail
 ufw
+gufw
 
 # --- live (99-live.txt): 7 шт. --------------------
 archinstall

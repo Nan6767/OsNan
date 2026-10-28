@@ -14,6 +14,7 @@ live-системе. Установка — это распаковка squashfs
 Ключи Calamares (global storage) подставляются прямо в командную строку:
 
     flyarchos-profile --apply --desktop=${gs[packagechooser_desktop]}
+                              --preset=${gs[packagechooser_preset]}
                               --extras=${gs[packagechooser_extras]}
 
 Без ``--apply`` ничего не меняется: печатается план (dry-run).
@@ -45,11 +46,22 @@ MANDATORY_GROUPS: tuple[str, ...] = ("core", "common", "apps")
 # Рабочие окружения (взаимоисключающие опции установщика).
 DESKTOP_GROUPS: tuple[str, ...] = ("hyprland", "plasma")
 # Дополнительные наборы ПО.
-EXTRA_GROUPS: tuple[str, ...] = ("dev", "gaming", "media", "office")
+EXTRA_GROUPS: tuple[str, ...] = ("dev", "gaming", "media", "office", "privacy")
+
+# Готовые сценарии установки (страница пресетов в Calamares): пресет задаёт
+# базовые наборы, отмеченные на странице «Наборы ПО» добавляются сверху.
+# Идентификаторы должны совпадать с packagechooser_preset.conf (тест следит).
+PRESETS: Dict[str, tuple[str, ...]] = {
+    "custom": (),
+    "gaming": ("gaming", "media"),
+    "workstation": ("dev", "office", "media"),
+    "privacy": ("privacy",),
+    "full": ("dev", "gaming", "media", "office", "privacy"),
+}
 # Пакеты только для live-образа.
 LIVE_GROUP = "live"
 # Порядок удаления: сначала «допы», затем окружения, в конце — live.
-REMOVAL_ORDER: tuple[str, ...] = LIVE_GROUP, "office", "media", "gaming", "dev", "plasma", "hyprland"
+REMOVAL_ORDER: tuple[str, ...] = LIVE_GROUP, "privacy", "office", "media", "gaming", "dev", "plasma", "hyprland"
 
 GROUP_TITLES = {
     "core": "Базовая система",
@@ -61,6 +73,7 @@ GROUP_TITLES = {
     "gaming": "Игры",
     "media": "Мультимедиа",
     "office": "Офис",
+    "privacy": "Приватность и безопасность",
     "live": "Только для live-образа",
 }
 
@@ -134,6 +147,22 @@ def normalize_extras(value: str | None) -> List[str]:
         if part not in picked:
             picked.append(part)
     return picked
+
+
+def normalize_preset(value: str | None) -> str:
+    """Привести имя пресета к известному идентификатору."""
+    raw = (value or "").strip().lower()
+    if not raw:
+        return "custom"
+    if raw not in PRESETS:
+        raise ProfileError(f"неизвестный пресет: {raw}")
+    return raw
+
+
+def merge_extras(preset: str, extras: Sequence[str]) -> List[str]:
+    """Наборы пресета + выбранные вручную, в каноническом порядке EXTRA_GROUPS."""
+    wanted = set(PRESETS[normalize_preset(preset)]) | set(extras)
+    return [name for name in EXTRA_GROUPS if name in wanted]
 
 
 def kept_groups(desktop: str, extras: Sequence[str], remove_live: bool) -> List[str]:
@@ -307,10 +336,12 @@ def cmd_list(groups: Dict[str, List[str]]) -> int:
 
 def cmd_show(args, groups: Dict[str, List[str]]) -> int:
     desktop = normalize_desktop(args.desktop)
-    extras = normalize_extras(args.extras)
+    preset = normalize_preset(getattr(args, "preset", "custom"))
+    extras = merge_extras(preset, normalize_extras(args.extras))
     kept = kept_groups(desktop, extras, not args.keep_live)
     plan = packages_to_remove(groups, kept)
     print(f"Окружение:      {desktop}")
+    print(f"Пресет:         {preset}")
     print(f"Наборы ПО:      {', '.join(extras) or '—'}")
     print(f"Остаётся групп: {', '.join(kept)}")
     print(f"Удаляемые группы: {', '.join(plan) or '—'}")
@@ -325,13 +356,14 @@ def cmd_show(args, groups: Dict[str, List[str]]) -> int:
 
 def cmd_apply(args, groups: Dict[str, List[str]]) -> int:
     desktop = normalize_desktop(args.desktop)
-    extras = normalize_extras(args.extras)
+    preset = normalize_preset(getattr(args, "preset", "custom"))
+    extras = merge_extras(preset, normalize_extras(args.extras))
     dry = not args.apply
     kept = kept_groups(desktop, extras, not args.keep_live)
     plan = packages_to_remove(groups, kept)
 
     print("=" * 68)
-    print(f"FlyArchOs: применяем профиль (окружение: {desktop}, наборы: {', '.join(extras) or '—'})")
+    print(f"FlyArchOs: применяем профиль (окружение: {desktop}, пресет: {preset}, наборы: {', '.join(extras) or '—'})")
     print(f"Режим: {'ПРИМЕНИТЬ' if args.apply else 'ПРОСМОТР (dry-run)'}")
     print("=" * 68)
 
@@ -358,6 +390,7 @@ def cmd_apply(args, groups: Dict[str, List[str]]) -> int:
     write_state(
         {
             "desktop": desktop,
+            "preset": preset,
             "extras": extras,
             "groups_kept": kept,
             "groups_removed": sorted(plan),
@@ -386,7 +419,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--desktop", default="both",
                        help="hyprland | plasma | both (можно списком через запятую)")
     parser.add_argument("--extras", default="",
-                       help="наборы ПО через запятую: dev,gaming,media,office")
+                       help="наборы ПО через запятую: dev,gaming,media,office,privacy")
+    parser.add_argument("--preset", default="custom",
+                       help="готовый сценарий: custom|gaming|workstation|privacy|full "
+                            "(его наборы плюс --extras)")
     parser.add_argument("--apply", action="store_true",
                        help="реально применить (по умолчанию только показ плана)")
     parser.add_argument("--remove-live", action="store_true", default=True,
@@ -405,6 +441,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub_show = sub.add_parser("show", help="показать план для указанного выбора")
     sub_show.add_argument("--desktop", default="both")
     sub_show.add_argument("--extras", default="")
+    sub_show.add_argument("--preset", default="custom")
     sub_show.add_argument("--keep-live", action="store_true")
     return parser
 

@@ -282,5 +282,158 @@ class BackupToolTest(unittest.TestCase):
             self.assertFalse((target / backup_tool.MANIFEST).exists())
 
 
+class BackupAutoTest(unittest.TestCase):
+    """Автобэкап: имена юнитов совпадают с файлами в образе, мусорный режим — код 2."""
+
+    def test_units_match_shipped_files(self):
+        service, timer = backup_tool.auto_units()
+        base = REPO / "profile" / "airootfs" / "usr" / "lib" / "systemd" / "user"
+        self.assertTrue((base / service).is_file(), service)
+        self.assertTrue((base / timer).is_file(), timer)
+
+    def test_auto_bogus_mode_returns_2(self):
+        self.assertEqual(backup_tool.cmd_auto("bogus"), 2)
+
+
+class VersionTest(unittest.TestCase):
+    """Бета-версия одинаковая в profiledef, os-release, файле версии и брендинге."""
+
+    def test_version_consistency(self):
+        import re
+
+        profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
+        m = re.search(r'iso_version="([^"]+)"', profiledef)
+        self.assertIsNotNone(m)
+        ver = m.group(1)
+        # Стабильная линия — 1.0.0; в дереве разработки держим только беты.
+        self.assertTrue(ver.endswith("-beta"), ver)
+        osrel = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "os-release").read_text(
+            encoding="utf-8")
+        self.assertIn(f"VERSION_ID={ver}", osrel)
+        self.assertIn(f'PRETTY_NAME="FlyArchOs {ver}"', osrel)
+        version = (REPO / "profile" / "airootfs" / "usr" / "share" / "flyarchos" / "version").read_text(
+            encoding="utf-8").strip()
+        self.assertEqual(version, ver)
+        branding = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "branding"
+                    / "flyarchos" / "branding.desc").read_text(encoding="utf-8")
+        self.assertIn(f'"{ver}"', branding)
+        customize = (REPO / "profile" / "customize_airootfs.sh").read_text(encoding="utf-8")
+        self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", customize)
+
+
+class InstallerFinalizeTest(unittest.TestCase):
+    """Финализатор включает файрвол только при наборе «Приватность»."""
+
+    def test_firewall_block(self):
+        fin = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+               / "install-finalize.sh").read_text(encoding="utf-8")
+        self.assertIn("*privacy*)", fin)
+        self.assertIn("systemctl enable ufw.service", fin)
+        self.assertIn('DEFAULT_INPUT_POLICY="DROP"', fin)
+
+
+class DoctorSecurityTest(unittest.TestCase):
+    """У доктора есть раздел безопасности, и он вызывается из main."""
+
+    def test_security_check_wired(self):
+        doc = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+               / "doctor_tool.py").read_text(encoding="utf-8")
+        self.assertIn("def check_security()", doc)
+        self.assertGreaterEqual(doc.count("check_security()"), 2)
+
+
+class WineToolTest(unittest.TestCase):
+    """flyarchos-exe: интеграция .exe в систему и аккуратные коды возврата."""
+
+    def _run_tool(self, *args):
+        import subprocess
+
+        exe = REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "flyarchos-exe"
+        return subprocess.run(["bash", str(exe), *args],
+                              capture_output=True, text=True, timeout=30)
+
+    def test_bogus_action_returns_2(self):
+        self.assertEqual(self._run_tool("bogus").returncode, 2)
+
+    def test_missing_file_returns_1(self):
+        self.assertEqual(self._run_tool("run", "/definitely/not/here.exe").returncode, 1)
+
+    def test_desktop_and_mimeapps(self):
+        desk = (REPO / "profile" / "airootfs" / "usr" / "share" / "applications"
+                / "flyarchos-exe.desktop").read_text(encoding="utf-8")
+        self.assertIn("application/x-ms-dos-executable", desk)
+        self.assertIn("Exec=flyarchos-exe run %f", desk)
+        mime = (REPO / "profile" / "airootfs" / "etc" / "xdg"
+                / "mimeapps.list").read_text(encoding="utf-8")
+        self.assertIn("application/x-ms-dos-executable=flyarchos-exe.desktop", mime)
+
+
+class PresetTest(unittest.TestCase):
+    """Пресеты установщика: слияние наборов и синхронность с конфигом Calamares."""
+
+    def test_merge_extras(self):
+        self.assertEqual(profile_tool.merge_extras("custom", ["dev"]), ["dev"])
+        self.assertEqual(profile_tool.merge_extras("gaming", []), ["gaming", "media"])
+        self.assertEqual(profile_tool.merge_extras("gaming", ["dev"]),
+                         ["dev", "gaming", "media"])
+        self.assertEqual(profile_tool.merge_extras("workstation", ["gaming"]),
+                         ["dev", "gaming", "media", "office"])
+        self.assertEqual(profile_tool.merge_extras("full", []),
+                         list(profile_tool.EXTRA_GROUPS))
+        self.assertEqual(profile_tool.merge_extras("", []), [])
+
+    def test_unknown_preset_rejected(self):
+        with self.assertRaises(profile_tool.ProfileError):
+            profile_tool.normalize_preset("bogus")
+
+    def test_all_extra_groups_registered(self):
+        # Регрессия 1.2.0–1.5.0: группа privacy существовала в установщике,
+        # но не в EXTRA_GROUPS — её выбор ронял применение профиля.
+        for name in ("dev", "gaming", "media", "office", "privacy"):
+            self.assertIn(name, profile_tool.EXTRA_GROUPS)
+            self.assertEqual(profile_tool.normalize_extras(name), [name])
+            self.assertIn(name, profile_tool.GROUP_TITLES)
+            self.assertIn(name, profile_tool.REMOVAL_ORDER)
+
+    def test_preset_conf_ids_match_presets(self):
+        import re
+
+        conf = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "modules"
+                / "packagechooser_preset.conf").read_text(encoding="utf-8")
+        ids = set(re.findall(r'^\s*- id: "(\w+)"', conf, re.M))
+        self.assertEqual(ids, set(profile_tool.PRESETS))
+
+
+class WineBottleTest(unittest.TestCase):
+    """Бутылки Wine: валидация имён и список без установленного Wine."""
+
+    def _run_tool(self, home, *args):
+        import os
+        import subprocess
+
+        exe = REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos" / "flyarchos-exe"
+        env = dict(os.environ, HOME=str(home))
+        return subprocess.run(["bash", str(exe), *args],
+                              capture_output=True, text=True, timeout=30, env=env)
+
+    def test_bottle_list_default(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            res = self._run_tool(tmp, "bottle", "list")
+            self.assertEqual(res.returncode, 0)
+            self.assertIn("default", res.stdout)
+
+    def test_bad_bottle_names_rejected(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(self._run_tool(tmp, "--bottle", "../evil", "status").returncode, 2)
+            self.assertEqual(self._run_tool(tmp, "bottle", "create", "bad/name").returncode, 2)
+            self.assertEqual(self._run_tool(tmp, "bottle", "create", "default").returncode, 2)
+            self.assertEqual(self._run_tool(tmp, "bottle", "remove", "default").returncode, 2)
+            self.assertEqual(self._run_tool(tmp, "bottle", "remove", "ghost").returncode, 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

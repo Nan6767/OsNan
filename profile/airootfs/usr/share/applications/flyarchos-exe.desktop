@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Windows Programs (.exe) via Wine
+Name[ru]=Программы Windows (.exe) через Wine
+GenericName=Wine Launcher
+GenericName[ru]=Запуск Windows-программ
+Comment=Run Windows programs (.exe, .msi) with Wine — FlyArchOs environment
+Comment[ru]=Запуск Windows-программ (.exe, .msi) через Wine — окружение FlyArchOs
+Exec=flyarchos-exe run %f
+Icon=wine
+Terminal=false
+Categories=Utility;
+MimeType=application/x-ms-dos-executable;application/x-msdownload;application/x-msi;application/x-ms-installer;
+Keywords=wine;exe;windows;msi;

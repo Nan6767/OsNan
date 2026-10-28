@@ -66,6 +66,23 @@ if [ "$MIRRORS" = "1" ] && command -v reflector >/dev/null 2>&1; then
         || warn "reflector не сработал — остаёмся на текущих зеркалах"
 fi
 
+# Новости Arch перед обновлением: изредка нужно ручное вмешательство.
+# Без сети просто молча пропускается.
+if command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+    news=$(curl -fs --max-time 5 https://archlinux.org/feeds/news/ 2>/dev/null \
+        | python3 -c 'import sys, itertools, xml.etree.ElementTree as E
+try:
+    root = E.parse(sys.stdin).getroot()
+    for it in itertools.islice(root.iter("item"), 3):
+        print("  -", (it.findtext("pubDate") or "")[:16], "—", it.findtext("title") or "")
+except Exception:
+    pass' 2>/dev/null || true)
+    if [ -n "$news" ]; then
+        log "Последние новости Arch Linux (вдруг там ручные действия):"
+        printf '%s\n' "$news"
+    fi
+fi
+
 pre_num=""
 if command -v snapper >/dev/null 2>&1 && snapper -c root get-config >/dev/null 2>&1; then
     pre_num="$(snapper -c root create --type pre --print-number \

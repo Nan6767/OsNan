@@ -1,0 +1,10 @@
+[Unit]
+Description=FlyArchOs — автоматический бэкап раз в день (вкл: flyarchos-backup auto on)
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
