@@ -455,6 +455,25 @@ class AuditRegressionTest(unittest.TestCase):
                 self.assertTrue(entry.endswith(":755"),
                                 f"{f.name}: нет 755 в file_permissions")
 
+    def test_initcpio_all_kernels(self):
+        conf = (self.AI / "etc" / "calamares" / "modules"
+                / "initcpio.conf").read_text(encoding="utf-8")
+        # иначе в полном образе не соберётся initramfs для linux-lts
+        self.assertIn("kernel: all", conf)
+        prep = (self.AI / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        # а пресет для отсутствующего ядра уронит mkinitcpio -P
+        self.assertIn("пресет пропущен", prep)
+
+    def test_no_snapper_timers_without_config(self):
+        # таймеры включает flyarchos-snapshot setup после создания конфига
+        svc = (self.AI / "etc" / "calamares" / "modules"
+               / "services-systemd.conf").read_text(encoding="utf-8")
+        self.assertNotIn("snapper-timeline", svc)
+        prep = (self.AI / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        self.assertNotIn("snapper-timeline", prep)
+
     def test_prepare_target_safety(self):
         prep = (self.AI / "usr" / "lib" / "flyarchos"
                 / "install-prepare.sh").read_text(encoding="utf-8")

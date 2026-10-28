@@ -43,7 +43,18 @@ rm -f /etc/mkinitcpio.conf.d/archiso.conf
 rm -f /etc/systemd/system-generators/systemd-gpt-auto-generator
 if [ -d /usr/share/flyarchos/mkinitcpio ]; then
     install -Dm 644 /usr/share/flyarchos/mkinitcpio/mkinitcpio.conf /etc/mkinitcpio.conf
+    # Пресет ставим только для реально установленного ядра: mkinitcpio -P
+    # (модуль initcpio настроен на kernel: all) падает на пресете без ядра.
+    has_main=0; has_lts=0
+    for v in /usr/lib/modules/*/vmlinuz; do
+        [ -f "$v" ] || continue
+        case "$v" in *lts*) has_lts=1 ;; *) has_main=1 ;; esac
+    done
     for preset in linux linux-lts; do
+        case "$preset" in
+            linux)     [ "$has_main" = 1 ] || { say "  ядро linux не установлено — пресет пропущен"; continue; } ;;
+            linux-lts) [ "$has_lts" = 1 ]  || { say "  ядро linux-lts не установлено — пресет пропущен"; continue; } ;;
+        esac
         if [ -f "/usr/share/flyarchos/mkinitcpio/${preset}.preset" ]; then
             install -Dm 644 "/usr/share/flyarchos/mkinitcpio/${preset}.preset" "/etc/mkinitcpio.d/${preset}.preset"
         fi
@@ -97,7 +108,7 @@ for unit in NetworkManager.service sddm.service bluetooth.service \
             systemd-timesyncd.service systemd-oomd.service; do
     run systemctl enable "$unit"
 done
-for unit in cups.service avahi-daemon.service snapper-timeline.timer \
+for unit in cups.service avahi-daemon.service \
             systemd-zram-setup@zram0.service; do
     systemctl enable "$unit" >>"$LOG" 2>&1 || say "  служба недоступна: $unit"
 done
