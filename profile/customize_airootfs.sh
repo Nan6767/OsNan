@@ -103,6 +103,9 @@ if [ "$(cat /usr/share/flyarchos/profile-variant 2>/dev/null)" = "mini" ]; then
             *) rm -f "$f" ;;
         esac
     done
+    # Эмодзи-шрифт тянется зависимостью (исключение пакета не помогло) —
+    # режем сам файл; системные эмодзи в mini не критичны.
+    rm -f /usr/share/fonts/noto/NotoColorEmoji.ttf 2>/dev/null || true
     fc-cache -f >/dev/null 2>&1 || true
     rm -rf /usr/share/doc /usr/share/gtk-doc /usr/share/info /usr/share/man 2>/dev/null || true
     for d in /usr/share/locale/*/; do
@@ -111,6 +114,15 @@ if [ "$(cat /usr/share/flyarchos/profile-variant 2>/dev/null)" = "mini" ]; then
             *) rm -rf "$d" ;;
         esac
     done
+    # Добиваем лимит одного файла с запасом: переводы Qt кроме en/ru,
+    # тесты Python, прошивки старого и серверного железа.
+    find /usr/share/qt6/translations -name '*.qm' \
+        ! -name '*_en.qm' ! -name '*_en_US.qm' ! -name '*_ru.qm' \
+        -delete 2>/dev/null || true
+    rm -rf /usr/lib/python3.*/test 2>/dev/null || true
+    rm -rf /usr/lib/firmware/radeon /usr/lib/firmware/liquidio \
+           /usr/lib/firmware/netronome /usr/lib/firmware/cavium \
+           /usr/lib/firmware/myri10ge 2>/dev/null || true
 fi
 
 echo "==> [9/9] Готово"
