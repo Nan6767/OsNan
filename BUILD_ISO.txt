@@ -44,3 +44,4 @@ trigger: 1.5.0-beta full
 trigger: 1.6.0-beta mini
 trigger: 1.6.0-beta full
 trigger: mini одним файлом (1.6.0-beta)
+trigger: 1.7.0-beta mini (boot fix)
