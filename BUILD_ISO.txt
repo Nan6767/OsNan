@@ -68,3 +68,4 @@ trigger: 1.7.0-beta full (boot fix)
 # триггер: full, пересборка после фикса CI-проверки squashfs (sfs_has)
 # триггер: mini, пересборка после фикса CI-проверки squashfs (кандидат для VirtualBox)
 # профиль по умолчанию: mini (одним файлом)
+# триггер: mini, AUR-пакеты (Calamares) реально добавляются в список mkarchiso
