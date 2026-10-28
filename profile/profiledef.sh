@@ -13,9 +13,12 @@ iso_version="1.7.0-beta"
 install_dir="arch"
 buildmodes=('iso')
 # Режимы загрузки берутся от releng-профиля archiso:
-# BIOS через syslinux, UEFI через systemd-boot. Если ваша версия archiso
+# BIOS через syslinux, UEFI через GRUB: GRUB грузит ядро и initramfs
+# прямо с ISO9660, а systemd-boot требует вторую копию внутри
+# EFI-раздела — с полным initramfs (+200 МБ) mini не влезает в лимит
+# GitHub 2 ГиБ одним файлом. Если ваша версия archiso
 # использует GRUB — scripts/build-iso.sh подставит поддерживаемый список сам.
-bootmodes=('bios.syslinux' 'uefi.systemd-boot')
+bootmodes=('bios.syslinux' 'uefi.grub')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"

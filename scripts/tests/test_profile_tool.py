@@ -445,6 +445,16 @@ class LiveBootTest(unittest.TestCase):
         for hook in ("archiso", "archiso_loop_mnt", "udev"):
             self.assertIn(hook, conf)
 
+    def test_initramfs_size_contract(self):
+        # mini должен влезать в один файл <2 ГиБ: initramfs сжат xz,
+        # а UEFI грузится через GRUB (одна копия initramfs, а не две).
+        conf = (REPO / "profile" / "airootfs" / "etc" / "mkinitcpio.conf.d"
+                / "archiso.conf").read_text(encoding="utf-8")
+        self.assertIn('COMPRESSION="xz"', conf)
+        profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
+        self.assertIn("'uefi.grub'", profiledef)
+        self.assertNotIn("uefi.systemd-boot", profiledef)
+
     def test_live_group_has_mkinitcpio_archiso(self):
         live = (REPO / "groups" / "99-live.txt").read_text(encoding="utf-8")
         self.assertIn("mkinitcpio-archiso", live)

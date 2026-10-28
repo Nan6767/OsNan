@@ -110,8 +110,8 @@ MINI_EXCLUDE: list[str] = [
     "nodejs", "npm", "python-pip",
     # документация и дубль редактора
     "man-pages", "texinfo", "vim",
-    # тяжёлые шрифты (остаются Noto Sans/Emoji, JetBrains Mono Nerd, DejaVu, Liberation)
-    "noto-fonts-cjk", "noto-fonts-extra", "ttf-fira-code", "ttf-roboto",
+    # тяжёлые шрифты (остаются Noto Sans, JetBrains Mono Nerd, Liberation)
+    "noto-fonts-cjk", "noto-fonts-extra", "noto-fonts-emoji", "ttf-fira-code", "ttf-roboto",
     "ttf-opensans", "inter-font", "ttf-jetbrains-mono",
     # второй браузер и мессенджеры (остаётся Firefox)
     "chromium", "telegram-desktop", "discord", "qbittorrent",
