@@ -60,3 +60,4 @@ trigger: 1.7.0-beta full (boot fix)
 # триггер: mini, фикс initramfs всех ядер
 # триггер: full, фикс initramfs ядер
 # профиль по умолчанию: mini (одним файлом)
+# триггер: mini, packagechooser в Calamares
