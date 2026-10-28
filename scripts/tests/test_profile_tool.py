@@ -317,8 +317,9 @@ class VersionTest(unittest.TestCase):
         branding = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "branding"
                     / "flyarchos" / "branding.desc").read_text(encoding="utf-8")
         self.assertIn(f'"{ver}"', branding)
-        customize = (REPO / "profile" / "customize_airootfs.sh").read_text(encoding="utf-8")
-        self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", customize)
+        setup = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+                 / "live-setup.sh").read_text(encoding="utf-8")
+        self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", setup)
 
 
 class InstallerFinalizeTest(unittest.TestCase):
@@ -433,6 +434,59 @@ class WineBottleTest(unittest.TestCase):
             self.assertEqual(self._run_tool(tmp, "bottle", "create", "default").returncode, 2)
             self.assertEqual(self._run_tool(tmp, "bottle", "remove", "default").returncode, 2)
             self.assertEqual(self._run_tool(tmp, "bottle", "remove", "ghost").returncode, 1)
+
+
+class LiveSessionTest(unittest.TestCase):
+    """Live-сессия без customize_airootfs.sh (archiso 91+ его не выполняет).
+
+    Пользователь, пароли, sudo и службы заданы статичными файлами
+    оверлея; сборочные действия выполняет pacman-хук live-setup.
+    """
+
+    AI = REPO / "profile" / "airootfs"
+
+    def test_no_customize_script(self):
+        self.assertFalse((REPO / "profile" / "customize_airootfs.sh").exists())
+
+    def test_live_user_static(self):
+        passwd = (self.AI / "etc" / "passwd").read_text(encoding="utf-8")
+        self.assertIn("root:x:0:0:", passwd)
+        self.assertIn("fly:x:1000:1000:", passwd)
+        shadow = (self.AI / "etc" / "shadow").read_text(encoding="utf-8")
+        for user in ("root", "fly"):
+            line = [ln for ln in shadow.splitlines()
+                    if ln.startswith(user + ":")][0]
+            self.assertTrue(line.split(":")[1].startswith("$"), user)
+        sysusers = (self.AI / "usr" / "lib" / "sysusers.d"
+                    / "flyarchos-live.conf").read_text(encoding="utf-8")
+        self.assertIn("m fly wheel", sysusers)
+
+    def test_live_hook_and_sudo(self):
+        hook = (self.AI / "etc" / "pacman.d" / "hooks"
+                / "flyarchos-live-setup.hook").read_text(encoding="utf-8")
+        self.assertIn("live-setup.sh", hook)
+        sudoers = (self.AI / "etc" / "sudoers.d"
+                   / "10-flyarchos-live").read_text(encoding="utf-8")
+        self.assertIn("NOPASSWD", sudoers)
+        prepare = (self.AI / "usr" / "lib" / "flyarchos"
+                   / "install-prepare.sh").read_text(encoding="utf-8")
+        self.assertIn("rm -f /etc/sudoers.d/10-flyarchos-live", prepare)
+        self.assertIn("flyarchos-live-setup.hook", prepare)
+        self.assertIn("flyarchos-live.conf", prepare)
+
+    def test_services_enabled_by_symlinks(self):
+        system = self.AI / "etc" / "systemd" / "system"
+        dm = system / "display-manager.service"
+        self.assertTrue(dm.is_symlink())
+        self.assertEqual(str(dm.readlink()),
+                         "/usr/lib/systemd/system/sddm.service")
+        self.assertTrue((system / "multi-user.target.wants"
+                         / "NetworkManager.service").is_symlink())
+
+    def test_build_iso_home_and_mini_noextract(self):
+        build = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn("airootfs/home/fly", build)
+        self.assertIn("NoExtract", build)
 
 
 class LiveBootTest(unittest.TestCase):

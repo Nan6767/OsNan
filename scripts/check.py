@@ -300,7 +300,10 @@ def check_shellprocess_targets(report: Report) -> None:
 
 # Эти файлы появляются в airootfs только после pacstrap (их приносит пакет
 # filesystem) — их отсутствие в дереве репозитория не ошибка.
-PACSTRAP_PATHS = {"/etc/shadow", "/etc/gshadow", "/etc/passwd", "/etc/group"}
+PACSTRAP_PATHS = {"/etc/shadow", "/etc/gshadow", "/etc/passwd", "/etc/group",
+    "/root",      # создаёт pacstrap
+    "/home/fly",  # собирает build-iso.sh из /etc/skel
+}
 
 
 def check_file_permissions(report: Report) -> None:
@@ -372,13 +375,13 @@ def check_desktop_files(report: Report) -> None:
     problems = []
     files = sorted(AIROOTFS.glob("usr/share/applications/*.desktop")) + \
         sorted(AIROOTFS.glob("etc/xdg/autostart/*.desktop"))
-    customize = (PROFILE / "customize_airootfs.sh").read_text(encoding="utf-8")
     for path in files:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.startswith("Exec="):
-                binary = line[5:].split()[0].lstrip("/")
-                target = AIROOTFS / binary
-                if not target.exists() and f"/usr/bin/{Path(binary).name}" not in customize:
+                rel = line[5:].split()[0].lstrip("/")
+                target = AIROOTFS / (rel if "/" in rel else f"usr/bin/{rel}")
+                binary = rel
+                if not target.exists():
                     problems.append(f"{path.name}: {binary} не найден")
     report.add(f"Ярлыки .desktop ({len(files)} шт.)", not problems, "; ".join(problems))
 

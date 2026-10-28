@@ -24,7 +24,7 @@ OsNan/
 │   ├── profiledef.sh         имя/лейбл ISO, сжатие squashfs, права файлов
 │   ├── pacman.conf.in        шаблон pacman.conf (multilib + локальный репозиторий)
 │   ├── packages.x86_64       генерируется скриптом gen-packages.py
-│   ├── customize_airootfs.sh настройка live-системы внутри chroot при сборке
+│   ├── настройка live при сборке: pacman-хук airootfs/etc/pacman.d/hooks/flyarchos-live-setup.hook (customize_airootfs.sh archiso 91+ НЕ выполняет)
 │   └── airootfs/             файлы, которые попадут в образ
 │       ├── etc/
 │       │   ├── calamares/

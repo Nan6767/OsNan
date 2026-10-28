@@ -14,6 +14,10 @@ say "=== подготовка системы $(date -Is) ==="
 # --- 1. Убираем всё, что нужно только в live -------------------------------
 say "Удаление live-мусора"
 rm -f /etc/sudoers.d/10-flyarchos-live
+rm -f /etc/pacman.d/hooks/flyarchos-live-setup.hook
+rm -f /usr/lib/flyarchos/live-setup.sh
+rm -f /usr/lib/sysusers.d/flyarchos-live.conf
+rm -f /etc/flyarchos-live-setup.done
 rm -f /etc/sddm.conf.d/zz-live-autologin.conf
 rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
 rm -rf /etc/systemd/system/getty@tty1.service.d

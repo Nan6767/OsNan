@@ -118,6 +118,11 @@ log "Подготовка рабочего профиля в $WORK/profile"
 rm -rf "$WORK/profile"
 cp -a "$PROFILE" "$WORK/profile"
 
+# Домашний каталог live-пользователя собирается из /etc/skel;
+# владельца mkarchiso выставит по /etc/passwd оверлея.
+install -d "$WORK/profile/airootfs/home/fly"
+cp -a "$WORK/profile/airootfs/etc/skel/." "$WORK/profile/airootfs/home/fly/"
+
 # описания групп нужны и установщику (внутри образа)
 mkdir -p "$WORK/profile/airootfs/usr/share/flyarchos/groups"
 cp -a "$REPO_ROOT"/groups/[0-9][0-9]-*.txt "$WORK/profile/airootfs/usr/share/flyarchos/groups/"
@@ -197,6 +202,27 @@ text = re.sub(r"airootfs_image_tool_options=\([^)]*\)",
 text, count=1)
 open(path, "w", encoding="utf-8").write(text)
 PYEOF
+        # Обрезка файлов пакетов для mini — NoExtract в pacman.conf:
+        # локали кроме en/ru, документация, переводы Qt, тесты Python,
+        # прошивки чужого железа, редкие шрифты. Файлы просто не
+        # распаковываются при pacstrap (customize_airootfs.sh нет).
+        log "Профиль mini: NoExtract в pacman.conf (ужимка под 2 ГиБ)"
+        python3 - "$WORK/profile/pacman.conf" <<'PYNOEX'
+import sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+assert "[options]" in text, "в pacman.conf нет секции [options]"
+noextract = (
+    "NoExtract = usr/share/locale/* !usr/share/locale/en* !usr/share/locale/ru* !usr/share/locale/C* !usr/share/locale/locale.alias\n"
+    "NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/info/* usr/share/man/*\n"
+    "NoExtract = usr/share/qt6/translations/*.qm !usr/share/qt6/translations/*_en.qm !usr/share/qt6/translations/*_en_US.qm !usr/share/qt6/translations/*_ru.qm\n"
+    "NoExtract = usr/share/fonts/noto/NotoColorEmoji.ttf usr/share/fonts/noto/NotoSans[A-Z]*.ttf !usr/share/fonts/noto/NotoSansDisplay*.ttf !usr/share/fonts/noto/NotoSansMono*.ttf !usr/share/fonts/noto/NotoSansSymbols*.ttf !usr/share/fonts/noto/NotoSansMath*.ttf usr/share/fonts/noto/NotoSerif[A-Z]*.ttf\n"
+    "NoExtract = usr/lib/firmware/qcom/* usr/lib/firmware/mellanox/* usr/lib/firmware/radeon/* usr/lib/firmware/liquidio/* usr/lib/firmware/netronome/* usr/lib/firmware/cavium/* usr/lib/firmware/myri10ge/*\n"
+    "NoExtract = usr/lib/python3.*/test/*\n"
+)
+text = text.replace("[options]\n", "[options]\n" + noextract, 1)
+open(path, "w", encoding="utf-8").write(text)
+PYNOEX
     fi
 fi
 

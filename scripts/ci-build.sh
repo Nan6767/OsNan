@@ -134,6 +134,25 @@ fi
 log "Сборка ISO"
 ./scripts/build-iso.sh --clean --profile "$PROFILE_NAME"
 
+# Контроль готового образа: live-сессия обязана существовать
+# (пользователь fly, пароль, дисплей-менеджер, брендинг, локаль).
+# Лучше упасть здесь, чем опубликовать непригодный ISO.
+log "Проверка содержимого образа"
+SFS="$(find work -name airootfs.sfs 2>/dev/null | head -1)"
+if [ -z "$SFS" ]; then
+    xorriso -osirrox on -indev out/*.iso -extract /arch/x86_64/airootfs.sfs /tmp/airootfs.sfs >/dev/null 2>&1 || true
+    SFS=/tmp/airootfs.sfs
+fi
+fail_iso() { echo "ОШИБКА ОБРАЗА: $1"; exit 1; }
+sfs_cat() { unsquashfs -cat "$SFS" "$1" 2>/dev/null; }
+sfs_cat /etc/passwd | grep -q '^fly:' || fail_iso "нет пользователя fly в /etc/passwd"
+sfs_cat /etc/shadow | grep -qE '^fly:\$' || fail_iso "у fly не задан пароль в /etc/shadow"
+sfs_cat /usr/lib/os-release | grep -qi 'FlyArchOs' || fail_iso "os-release не брендирован (хук live-setup не сработал)"
+sfs_cat /usr/lib/locale/locale-archive | grep -aq 'ru_RU' || fail_iso "локаль ru_RU не сгенерирована"
+unsquashfs -l "$SFS" /etc/systemd/system/display-manager.service >/dev/null 2>&1 || fail_iso "нет display-manager.service (SDDM не включён)"
+unsquashfs -l "$SFS" /home/fly >/dev/null 2>&1 || fail_iso "нет домашнего каталога /home/fly"
+echo "  образ проверен: live-сессия на месте"
+
 log "Результат"
 ls -lh out/
 for sum in out/*.sha256; do

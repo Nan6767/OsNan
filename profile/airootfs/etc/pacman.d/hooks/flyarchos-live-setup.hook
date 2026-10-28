@@ -1,0 +1,15 @@
+# FlyArchOs: настройка live-образа на этапе сборки ISO.
+# Современный mkarchiso (91+) не выполняет customize_airootfs.sh,
+# поэтому действия, которым нужна собранная система, делает этот хук
+# в конце pacstrap. См. /usr/lib/flyarchos/live-setup.sh.
+# На установленной системе хук удаляет install-prepare.sh.
+
+[Trigger]
+Type = Package
+Operation = Install
+Target = glibc
+
+[Action]
+Description = FlyArchOs: настройка live-образа (locale-gen, os-release)
+When = PostTransaction
+Exec = /usr/bin/bash /usr/lib/flyarchos/live-setup.sh
