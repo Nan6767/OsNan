@@ -51,3 +51,4 @@ trigger: 1.7.0-beta full (boot fix)
 # триггер: mini, live-сессия без customize (оверлей+хук+NoExtract)
 # триггер: mini, фикс генерации локалей
 # триггер: mini, диагностика локалей
+# триггер: mini, фикс проверки образа (SIGPIPE)
