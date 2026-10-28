@@ -23,5 +23,9 @@ testdisk
 #   memtest86+-efi — то же самое для UEFI.
 syslinux
 edk2-shell
+
+# Хуки initramfs, монтирующие live-систему с ISO (archiso, archiso_loop_mnt).
+# Без этого пакета загрузка падает на «Failed to start Switch Root».
+mkinitcpio-archiso
 memtest86+
 memtest86+-efi

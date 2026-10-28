@@ -33,6 +33,10 @@ rm -f /etc/motd
 # --- 2. Обычные mkinitcpio-пресеты вместо archiso-овских ------------------
 say "mkinitcpio: обычные пресеты"
 rm -f /etc/mkinitcpio-archiso.conf
+# Live-хуки archiso не должны попасть в initramfs установленной системы
+rm -f /etc/mkinitcpio.conf.d/archiso.conf
+# Включаем обратно gpt-auto-generator (в live он заглушён)
+rm -f /etc/systemd/system-generators/systemd-gpt-auto-generator
 if [ -d /usr/share/flyarchos/mkinitcpio ]; then
     install -Dm 644 /usr/share/flyarchos/mkinitcpio/mkinitcpio.conf /etc/mkinitcpio.conf
     for preset in linux linux-lts; do

@@ -9,7 +9,7 @@ iso_name="flyarchos"
 iso_label="FLYARCHOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="FlyArchOs <https://github.com/Nan6767/OsNan>"
 iso_application="FlyArchOs Linux - Arch-based live/installable ISO (Hyprland + KDE Plasma)"
-iso_version="1.6.0-beta"
+iso_version="1.7.0-beta"
 install_dir="arch"
 buildmodes=('iso')
 # Режимы загрузки берутся от releng-профиля archiso:

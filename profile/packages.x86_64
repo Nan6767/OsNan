@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 326
+# Всего пакетов: 327
 # Профиль:  (группы: )
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -348,11 +348,12 @@ firejail
 ufw
 gufw
 
-# --- live (99-live.txt): 7 шт. --------------------
+# --- live (99-live.txt): 8 шт. --------------------
 archinstall
 clonezilla
 testdisk
 syslinux
 edk2-shell
+mkinitcpio-archiso
 memtest86+
 memtest86+-efi

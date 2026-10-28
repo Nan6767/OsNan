@@ -435,5 +435,30 @@ class WineBottleTest(unittest.TestCase):
             self.assertEqual(self._run_tool(tmp, "bottle", "remove", "ghost").returncode, 1)
 
 
+class LiveBootTest(unittest.TestCase):
+    """Live-загрузка: без archiso-хуков ISO падает на Switch Root (баг до 1.7.0)."""
+
+    def test_archiso_hooks_present(self):
+        conf = (REPO / "profile" / "airootfs" / "etc" / "mkinitcpio.conf.d"
+                / "archiso.conf").read_text(encoding="utf-8")
+        self.assertIn("HOOKS=(", conf)
+        for hook in ("archiso", "archiso_loop_mnt", "udev"):
+            self.assertIn(hook, conf)
+
+    def test_live_group_has_mkinitcpio_archiso(self):
+        live = (REPO / "groups" / "99-live.txt").read_text(encoding="utf-8")
+        self.assertIn("mkinitcpio-archiso", live)
+
+    def test_prepare_removes_live_hooks(self):
+        prep = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        self.assertIn("rm -f /etc/mkinitcpio.conf.d/archiso.conf", prep)
+
+    def test_initcpiocfg_has_no_btrfs_hook(self):
+        conf = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "modules"
+                / "initcpiocfg.conf").read_text(encoding="utf-8")
+        self.assertNotIn("[ btrfs ]", conf)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
