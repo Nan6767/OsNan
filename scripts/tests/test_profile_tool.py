@@ -474,6 +474,17 @@ class AuditRegressionTest(unittest.TestCase):
                 / "install-prepare.sh").read_text(encoding="utf-8")
         self.assertNotIn("snapper-timeline", prep)
 
+    def test_installer_actually_present(self):
+        # AUR-PKGBUILD пропускает packagechooser: build-aur обязан снять
+        # пропуск, а CI — проверить бинарь и модуль в готовом образе,
+        # иначе Calamares не стартует из-за отсутствующего модуля.
+        build_aur = (REPO / "scripts" / "build-aur.sh").read_text(encoding="utf-8")
+        self.assertIn('"$pkg" = "calamares"', build_aur)
+        self.assertIn("packagechooser", build_aur)
+        ci = (REPO / "scripts" / "ci-build.sh").read_text(encoding="utf-8")
+        self.assertIn("/usr/bin/calamares", ci)
+        self.assertIn("modules/packagechooser", ci)
+
     def test_prepare_target_safety(self):
         prep = (self.AI / "usr" / "lib" / "flyarchos"
                 / "install-prepare.sh").read_text(encoding="utf-8")

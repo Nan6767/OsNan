@@ -192,6 +192,10 @@ homeuid="$(stat -c %u /tmp/homeprobe/home/fly/.config/hypr/hyprland.conf 2>/dev/
 [ "$homeuid" = "1000" ] || fail_iso "конфиги в /home/fly принадлежат uid=$homeuid, а не 1000"
 # Демон обоев Hyprland
 unsquashfs -l "$SFS" /usr/bin/awww >/dev/null 2>&1 || fail_iso "нет /usr/bin/awww (обои Hyprland)"
+# Установщик и модуль выбора наборов физически на месте (AUR-PKGBUILD
+# пропускает packagechooser — build-aur.sh снимает пропуск, здесь контроль)
+unsquashfs -l "$SFS" /usr/bin/calamares >/dev/null 2>&1 || fail_iso "нет /usr/bin/calamares (установщик)"
+unsquashfs -l "$SFS" /usr/lib/calamares/modules/packagechooser >/dev/null 2>&1 || fail_iso "нет модуля packagechooser (страницы выбора в установщике)"
 echo "  образ проверен: live-сессия на месте"
 
 log "Результат"
