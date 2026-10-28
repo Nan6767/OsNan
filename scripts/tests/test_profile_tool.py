@@ -543,6 +543,13 @@ class AuditRegressionTest(unittest.TestCase):
         self.assertIn("--preset=custom --extras=", build)
         self.assertIn("assert key not in text", build)
 
+    def test_aux_packages_merged_into_mkarchiso_list(self):
+        # mkarchiso читает только packages.x86_64; packages.aux игнорируется.
+        # Регрессия №55: Calamares собирался, но в образ не устанавливался.
+        build = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn('cat "$WORK/profile/packages.aux"', build)
+        self.assertIn('>> "$WORK/profile/packages.x86_64"', build)
+
     def test_target_pacman_config_and_mirrors(self):
         conf = (self.AI / "etc" / "pacman.conf").read_text(encoding="utf-8")
         self.assertIn("[multilib]", conf)

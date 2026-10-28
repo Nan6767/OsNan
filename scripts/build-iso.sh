@@ -118,6 +118,19 @@ log "Подготовка рабочего профиля в $WORK/profile"
 rm -rf "$WORK/profile"
 cp -a "$PROFILE" "$WORK/profile"
 
+# КРИТИЧНО: mkarchiso читает ТОЛЬКО packages.x86_64 (или packages) из
+# profiledef — файла packages.aux он не знает и молча игнорирует. До этого
+# фикса Calamares собирался из AUR, попадал в packages.aux… и НИКОГДА не
+# устанавливался в образ, а старая CI-проверка по коду возврата unsquashfs
+# этого не видела. Дописываем реально собранные AUR-пакеты в рабочий список.
+if [ -s "$WORK/profile/packages.aux" ]; then
+    log "  AUR-пакеты из локального репозитория → рабочий packages.x86_64: $(tr '\n' ' ' < "$WORK/profile/packages.aux")"
+    {
+        printf '\n# --- AUR/локальный репозиторий (packages.aux) ---\n'
+        cat "$WORK/profile/packages.aux"
+    } >> "$WORK/profile/packages.x86_64"
+fi
+
 # Домашний каталог live-пользователя собирается из /etc/skel;
 # владельца mkarchiso выставит по /etc/passwd оверлея.
 install -d "$WORK/profile/airootfs/home/fly"
