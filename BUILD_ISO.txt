@@ -15,8 +15,8 @@
 #          второе ядро, компиляторы, тяжёлые шрифты и мессенджеры.
 #
 # Готовый ISO — в артефактах запуска (90 дней) и в релизе GitHub.
-profile=full
-profile=full
+profile=mini
+profile=mini
 # запрос сборки 2026-10-25T21:42:13Z
 # ещё одна попытка 2026-10-25T21:46:30Z
 # попытка 2026-10-25T21:50:17Z
@@ -46,3 +46,4 @@ trigger: 1.6.0-beta full
 trigger: mini одним файлом (1.6.0-beta)
 trigger: 1.7.0-beta mini (boot fix)
 trigger: 1.7.0-beta full (boot fix)
+# триггер: пересборка mini (GRUB/xz, влезть в 2 ГБ одним файлом)
