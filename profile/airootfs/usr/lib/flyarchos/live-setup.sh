@@ -20,8 +20,12 @@ MARKER=/etc/flyarchos-live-setup.done
 for loc in en_US ru_RU; do
     grep -qx "${loc}.UTF-8 UTF-8" /etc/locale.gen 2>/dev/null \
         || echo "${loc}.UTF-8 UTF-8" >> /etc/locale.gen 2>/dev/null || true
-    localedef -i "${loc}" -f UTF-8 "${loc}.UTF-8" 2>/dev/null || true
+    localedef -i "${loc}" -f UTF-8 "${loc}.UTF-8" || true
 done
+locale-gen || true
+echo "=== FlyArchOs live-setup: собранные локали ==="
+localedef --list-archive || true
+ls -la /usr/lib/locale/ || true
 
 # Фирменный os-release: заменяем файл пакета filesystem после установки.
 install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release 2>/dev/null || true

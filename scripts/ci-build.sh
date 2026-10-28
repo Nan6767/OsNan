@@ -148,7 +148,12 @@ sfs_cat() { unsquashfs -cat "$SFS" "$1" 2>/dev/null; }
 sfs_cat /etc/passwd | grep -q '^fly:' || fail_iso "нет пользователя fly в /etc/passwd"
 sfs_cat /etc/shadow | grep -qE '^fly:\$' || fail_iso "у fly не задан пароль в /etc/shadow"
 sfs_cat /usr/lib/os-release | grep -qi 'FlyArchOs' || fail_iso "os-release не брендирован (хук live-setup не сработал)"
-sfs_cat /usr/lib/locale/locale-archive | grep -aq 'ru_RU' || fail_iso "локаль ru_RU не сгенерирована"
+if ! { sfs_cat /usr/lib/locale/locale-archive | grep -aq 'ru_RU' || unsquashfs -l "$SFS" /usr/lib/locale 2>/dev/null | grep -q 'ru_RU'; }; then
+    echo "--- диагностика локалей в образе ---"
+    unsquashfs -l "$SFS" /usr/lib/locale 2>&1 | head -30
+    sfs_cat /usr/lib/locale/locale-archive | strings | head -20
+    fail_iso "локаль ru_RU не сгенерирована"
+fi
 unsquashfs -l "$SFS" /etc/systemd/system/display-manager.service >/dev/null 2>&1 || fail_iso "нет display-manager.service (SDDM не включён)"
 unsquashfs -l "$SFS" /home/fly >/dev/null 2>&1 || fail_iso "нет домашнего каталога /home/fly"
 echo "  образ проверен: live-сессия на месте"
