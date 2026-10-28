@@ -513,6 +513,10 @@ class AuditRegressionTest(unittest.TestCase):
         # и вообще каждый модуль последовательности + GS-инвариант
         self.assertIn("module.desc", ci)
         self.assertIn("shown_choosers", ci)
+        # unsquashfs -l <путь> возвращает 0 и без файла — существование
+        # проверяется по выводу (sfs_has), иначе проверки врут в обе стороны
+        self.assertIn("sfs_has()", ci)
+        self.assertIn("grep -aF", ci)
 
     def test_profile_cli_dry_run(self):
         """Реальный вызов CLI, как в shellprocess@profile (без --apply).

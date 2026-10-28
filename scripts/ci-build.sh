@@ -152,6 +152,12 @@ sfs_cat() { unsquashfs -cat "$SFS" "$1" 2>/dev/null; }
 # первом совпадении, unsquashfs получает SIGPIPE, и при pipefail вся
 # проверка падает, хотя совпадение было (так падала проверка локали).
 sfs_grep() { sfs_cat "$1" | grep -ai "$2" >/dev/null 2>&1; }
+# ВАЖНО: `unsquashfs -l "$SFS" /path` возвращает 0, даже если файла нет
+# (путь — это фильтр, а не требование: просто печатается пустой список).
+# Поэтому существование проверяем по ВЫВОДУ, а не по коду возврата —
+# иначе негативная проверка срабатывает всегда, а позитивные не проверяют
+# ничего (так упала сборка №53 на «оставшемся» hyprland.conf).
+sfs_has() { unsquashfs -l "$SFS" "$1" 2>/dev/null | grep -aF "$1" >/dev/null 2>&1; }
 sfs_grep /etc/passwd '^fly:' || fail_iso "нет пользователя fly в /etc/passwd"
 sfs_grep /etc/shadow '^fly:$' && fail_iso "у fly пустой пароль в /etc/shadow"
 sfs_grep /etc/shadow '^fly:\$' || fail_iso "у fly не задан пароль в /etc/shadow"
@@ -162,8 +168,8 @@ if ! sfs_grep /usr/lib/locale/locale-archive 'ru_RU'; then
     sfs_cat /usr/lib/locale/locale-archive | strings | head -20
     fail_iso "локаль ru_RU не сгенерирована"
 fi
-unsquashfs -l "$SFS" /etc/systemd/system/display-manager.service >/dev/null 2>&1 || fail_iso "нет display-manager.service (SDDM не включён)"
-unsquashfs -l "$SFS" /home/fly >/dev/null 2>&1 || fail_iso "нет домашнего каталога /home/fly"
+sfs_has /etc/systemd/system/display-manager.service || fail_iso "нет display-manager.service (SDDM не включён)"
+sfs_has /home/fly || fail_iso "нет домашнего каталога /home/fly"
 # Права на исполнение инструментов: оверлей теряет +x без file_permissions,
 # а симлинки /usr/bin/flyarchos-* тогда ведут в Permission denied.
 for tool in profile_tool.py wallpaper_tool.py wallpapers.py welcome-gui.py \
@@ -187,24 +193,24 @@ unsquashfs -l "$SFS" /usr/lib/modules 2>/dev/null | grep -a '/vmlinuz' >/dev/nul
 if unsquashfs -l "$SFS" /etc/pacman.d/gnupg 2>/dev/null | grep -ai 'private-keys' >/dev/null 2>&1; then
     fail_iso "в образе приватные ключи pacman сборочного хоста"
 fi
-unsquashfs -l "$SFS" /etc/systemd/system/multi-user.target.wants/pacman-init.service >/dev/null 2>&1 || fail_iso "pacman-init.service не включён"
+sfs_has /etc/systemd/system/multi-user.target.wants/pacman-init.service || fail_iso "pacman-init.service не включён"
 # Вложенные конфиги домашнего каталога принадлежат fly (1000), а не root
 rm -rf /tmp/homeprobe
 unsquashfs -q -d /tmp/homeprobe "$SFS" /home/fly/.config/hypr/hyprland.lua >/dev/null 2>&1 || true
 homeuid="$(stat -c %u /tmp/homeprobe/home/fly/.config/hypr/hyprland.lua 2>/dev/null || echo '?')"
 [ "$homeuid" = "1000" ] || fail_iso "конфиги в /home/fly принадлежат uid=$homeuid, а не 1000"
 # Демон обоев Hyprland
-unsquashfs -l "$SFS" /usr/bin/awww >/dev/null 2>&1 || fail_iso "нет /usr/bin/awww (обои Hyprland)"
+sfs_has /usr/bin/awww || fail_iso "нет /usr/bin/awww (обои Hyprland)"
 # Установщик и модуль выбора наборов физически на месте (AUR-PKGBUILD
 # пропускает packagechooser — build-aur.sh снимает пропуск, здесь контроль)
-unsquashfs -l "$SFS" /usr/bin/calamares >/dev/null 2>&1 || fail_iso "нет /usr/bin/calamares (установщик)"
-unsquashfs -l "$SFS" /usr/lib/calamares/modules/packagechooser >/dev/null 2>&1 || fail_iso "нет модуля packagechooser (страницы выбора в установщике)"
+sfs_has /usr/bin/calamares || fail_iso "нет /usr/bin/calamares (установщик)"
+sfs_has /usr/lib/calamares/modules/packagechooser || fail_iso "нет модуля packagechooser (страницы выбора в установщике)"
 
 # Hyprland 0.57+ читает только Lua-конфиг. Legacy hyprland.conf в домашнем
 # каталоге означает молча потерянные автозапуск, панель, обои и бинды.
-unsquashfs -l "$SFS" /etc/skel/.config/hypr/hyprland.lua >/dev/null 2>&1 || fail_iso "нет skel hyprland.lua (Hyprland 0.57 не читает .conf)"
-unsquashfs -l "$SFS" /etc/skel/.config/hypr/theme.lua >/dev/null 2>&1 || fail_iso "нет skel theme.lua для Hyprland"
-if unsquashfs -l "$SFS" /etc/skel/.config/hypr/hyprland.conf >/dev/null 2>&1; then
+sfs_has /etc/skel/.config/hypr/hyprland.lua || fail_iso "нет skel hyprland.lua (Hyprland 0.57 не читает .conf)"
+sfs_has /etc/skel/.config/hypr/theme.lua || fail_iso "нет skel theme.lua для Hyprland"
+if sfs_has /etc/skel/.config/hypr/hyprland.conf; then
     fail_iso "в образе остался legacy hyprland.conf вместо hyprland.lua"
 fi
 sfs_grep /etc/skel/.config/hypr/hyprland.lua 'hl.on("hyprland.start"' || fail_iso "hyprland.lua без автозапуска FlyArchOs"
@@ -214,9 +220,9 @@ fi
 
 # Менеджер входа и обе сессии физически в образе (имена .desktop менялись
 # между версиями Hyprland/Plasma, а SDDM раньше уезжал с группой Plasma).
-unsquashfs -l "$SFS" /usr/bin/sddm >/dev/null 2>&1 || fail_iso "нет /usr/bin/sddm"
-unsquashfs -l "$SFS" /usr/share/wayland-sessions/hyprland.desktop >/dev/null 2>&1 || fail_iso "нет сессии hyprland.desktop"
-unsquashfs -l "$SFS" /usr/share/wayland-sessions/plasma.desktop >/dev/null 2>&1 || fail_iso "нет сессии plasma.desktop"
+sfs_has /usr/bin/sddm || fail_iso "нет /usr/bin/sddm"
+sfs_has /usr/share/wayland-sessions/hyprland.desktop || fail_iso "нет сессии hyprland.desktop"
+sfs_has /usr/share/wayland-sessions/plasma.desktop || fail_iso "нет сессии plasma.desktop"
 
 # Конфиг pacman УСТАНОВЛЕННОЙ системы: multilib включён, а сборочных
 # file://-репозиториев и mini-NoExtract в нём быть не должно.
@@ -302,7 +308,7 @@ then
 fi
 while IFS= read -r module; do
     [ -n "$module" ] || continue
-    unsquashfs -l "$SFS" "/usr/lib/calamares/modules/$module/module.desc" >/dev/null 2>&1 || \
+    sfs_has "/usr/lib/calamares/modules/$module/module.desc" || \
         fail_iso "нет module.desc модуля Calamares: $module"
 done < /tmp/calamares-modules.txt
 echo "  образ проверен: live-сессия на месте"
