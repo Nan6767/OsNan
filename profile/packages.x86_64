@@ -129,7 +129,7 @@ python-pip
 nodejs
 npm
 
-# --- common (10-common.txt): 42 шт. --------------------
+# --- common (10-common.txt): 43 шт. --------------------
 xorg-xwayland
 xorg-xrandr
 qt5-wayland
@@ -165,6 +165,7 @@ imagemagick
 ffmpeg
 ffmpegthumbs
 tumbler
+sddm
 playerctl
 brightnessctl
 libnotify
@@ -190,7 +191,7 @@ thunar-archive-plugin
 thunar-volman
 xarchiver
 
-# --- plasma (30-plasma.txt): 48 шт. --------------------
+# --- plasma (30-plasma.txt): 47 шт. --------------------
 plasma-meta
 plasma-desktop
 plasma-workspace
@@ -215,7 +216,6 @@ bluedevil
 kde-cli-tools
 kio-extras
 xdg-desktop-portal-kde
-sddm
 sddm-kcm
 dolphin
 dolphin-plugins

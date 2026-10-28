@@ -141,7 +141,7 @@ flyarchos-info               # краткая справка о системе
 Горячие клавиши Hyprland: `SUPER+Enter` — терминал, `SUPER+D` — меню,
 `SUPER+W` — случайные обои, `SUPER+L` — блокировка, `Print` — скриншот в буфер,
 `SUPER+1..0` — рабочие столы, `Alt+Shift` — переключение раскладки us/ru.
-Полный список — в `profile/airootfs/etc/skel/.config/hypr/hyprland.conf`.
+Полный список — в `profile/airootfs/etc/skel/.config/hypr/hyprland.lua` (Hyprland 0.57+ использует Lua-конфиг).
 
 ## Структура репозитория
 

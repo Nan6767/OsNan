@@ -162,6 +162,23 @@ class RealGroupsTest(unittest.TestCase):
         for group in ("dev", "media", "office"):
             self.assertIn(group, plan)
 
+    def test_sddm_survives_every_desktop_choice(self):
+        # SDDM — единственный менеджер входа для обеих сессий. Когда он
+        # жил в группе plasma, установка «только Hyprland» удаляла его
+        # вместе с Plasma и система оставалась без графического входа.
+        self.assertIn("sddm", self.groups["common"])
+        self.assertNotIn("sddm", self.groups["plasma"])
+        for desktop in ("hyprland", "plasma", "both"):
+            plan = profile_tool.packages_to_remove(
+                self.groups, profile_tool.kept_groups(desktop, [], True))
+            removed = set(sum(plan.values(), []))
+            self.assertNotIn("sddm", removed, f"sddm удаляется при выборе {desktop}")
+
+    def test_live_only_installer_package_is_explicit(self):
+        # Calamares приходит из AUR (packages.aux) и в нумерованные
+        # группы не входит, поэтому profile_tool удаляет его явно.
+        self.assertIn("calamares", profile_tool.LIVE_ONLY_PACKAGES)
+
     def test_dolphin_survives_hyprland_only(self):
         """Dolphin тянется Plasma — но он же файловый менеджер KDE-приложений."""
         plan = profile_tool.packages_to_remove(self.groups, profile_tool.kept_groups("hyprland", [], True))
@@ -239,6 +256,15 @@ class ThemePresetsTest(unittest.TestCase):
                             f"пресет {name}: нет обоев {wallpaper}")
             self.assertEqual(len(theme_tool.hex_to_rgb(accent)), 3)
             self.assertEqual(len(theme_tool.hex_to_rgb(accent2)), 3)
+
+
+class ThemeLuaTest(unittest.TestCase):
+    def test_theme_writes_lua_not_legacy_conf(self):
+        # Hyprland 0.57+ не читает .conf: тема обязана быть Lua.
+        self.assertEqual(theme_tool.HYPR_THEME.name, "theme.lua")
+        source = Path(theme_tool.__file__).read_text(encoding="utf-8")
+        self.assertIn("hl.config", source)
+        self.assertNotIn("col.active_border   =", source)
 
 
 class BackupToolTest(unittest.TestCase):
@@ -484,6 +510,67 @@ class AuditRegressionTest(unittest.TestCase):
         ci = (REPO / "scripts" / "ci-build.sh").read_text(encoding="utf-8")
         self.assertIn("/usr/bin/calamares", ci)
         self.assertIn("modules/packagechooser", ci)
+        # и вообще каждый модуль последовательности + GS-инвариант
+        self.assertIn("module.desc", ci)
+        self.assertIn("shown_choosers", ci)
+
+    def test_profile_cli_dry_run(self):
+        """Реальный вызов CLI, как в shellprocess@profile (без --apply).
+
+        Регрессия: основной парсер создаёт remove_live, а cmd_apply читал
+        args.keep_live — установщик падал с AttributeError на любом образе.
+        """
+        import subprocess
+
+        proc = subprocess.run(
+            [sys.executable, str(PROFILE_TOOL), "--groups-dir", str(REPO / "groups"),
+             "--desktop=hyprland", "--preset=custom", "--extras=", "--remove-live"],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
+        self.assertNotIn("AttributeError", proc.stderr)
+        # установщик из AUR удаляется явно, а не через нумерованные группы
+        self.assertIn("calamares", proc.stderr)
+
+    def test_slim_mini_profile_command_rewrite(self):
+        # В slim/mini страниц preset/extras нет — GS-ключей не будет, и
+        # build-iso обязан убрать их из команды shellprocess@profile.
+        build = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn("shellprocess_profile.conf", build)
+        self.assertIn("--preset=custom --extras=", build)
+        self.assertIn("assert key not in text", build)
+
+    def test_target_pacman_config_and_mirrors(self):
+        conf = (self.AI / "etc" / "pacman.conf").read_text(encoding="utf-8")
+        self.assertIn("[multilib]", conf)
+        for line in conf.splitlines():
+            stripped = line.strip()
+            self.assertFalse(stripped.startswith("Server") and "file://" in stripped, line)
+            self.assertFalse(stripped.startswith("NoExtract"), line)
+            self.assertNotEqual(stripped, "[flyarchos]")
+        mirrors = (self.AI / "etc" / "pacman.d" / "mirrorlist").read_text(encoding="utf-8")
+        self.assertRegex(mirrors, r"(?m)^Server = https://")
+        template = (REPO / "profile" / "pacman.conf.in").read_text(encoding="utf-8")
+        self.assertEqual(template.count("@FLYARCHOS_REPO@"), 1)
+
+    def test_luks1_for_grub(self):
+        conf = (self.AI / "etc" / "calamares" / "modules"
+                / "partition.conf").read_text(encoding="utf-8")
+        self.assertIn("luksGeneration: luks1", conf)
+        self.assertNotIn("luksGeneration: luks2", conf)
+
+    def test_finalize_checks_real_bootloader_and_sddm_theme(self):
+        fin = (self.AI / "usr" / "lib" / "flyarchos"
+               / "install-finalize.sh").read_text(encoding="utf-8")
+        # загрузчик: артефакты на ESP и повтор bootctl, а не один grub.cfg
+        self.assertIn("systemd_boot_entries_ok", fin)
+        self.assertIn("bootctl --path", fin)
+        self.assertIn("lsblk -dn -o PKNAME", fin)  # диск BIOS через родителей
+        # тема SDDM выбирается из фактически оставшихся после профиля
+        self.assertIn("elarun", fin)
+        self.assertIn("zz-flyarchos-finalize.conf", fin)
+        # страховочное удаление установщика из целевой системы
+        self.assertIn("pacman -Rns", fin)
+        self.assertIn("flyarchos-install.desktop", fin)
 
     def test_prepare_target_safety(self):
         prep = (self.AI / "usr" / "lib" / "flyarchos"
@@ -510,13 +597,32 @@ class AuditRegressionTest(unittest.TestCase):
 
     def test_wallpaper_daemon_is_awww(self):
         conf = (self.AI / "etc" / "skel" / ".config" / "hypr"
-                / "hyprland.conf").read_text(encoding="utf-8")
+                / "hyprland.lua").read_text(encoding="utf-8")
         self.assertIn("awww-daemon", conf)
         self.assertNotIn("swww", conf)
         groups = "\n".join(p.read_text(encoding="utf-8")
                             for p in (REPO / "groups").glob("*.txt"))
         self.assertRegex(groups, r"(?m)^awww$")
         self.assertNotRegex(groups, r"(?m)^swww$")
+
+    def test_hyprland_config_is_lua(self):
+        # Hyprland 0.57 убрал поддержку .conf: с legacy-конфигом сессия
+        # стартует без автозапуска, панели, обоев и наших биндов.
+        hypr = self.AI / "etc" / "skel" / ".config" / "hypr"
+        lua = (hypr / "hyprland.lua").read_text(encoding="utf-8")
+        self.assertFalse((hypr / "hyprland.conf").exists())
+        self.assertFalse((hypr / "theme.conf").exists())
+        theme = (hypr / "theme.lua").read_text(encoding="utf-8")
+        self.assertIn("hl.config", theme)
+        for needle in ('hl.on("hyprland.start"', "hl.bind", "hl.monitor",
+                       'require("theme")', "wpctl set-volume",
+                       "flyarchos-welcome --autostart", "waybar"):
+            self.assertIn(needle, lua)
+        for legacy in ("exec-once", "windowrulev2", "source =", "pamixer -"):
+            self.assertNotIn(legacy, lua)
+        idle = (hypr / "hypridle.conf").read_text(encoding="utf-8")
+        self.assertIn("hl.dsp.dpms", idle)
+        self.assertNotIn("dispatch dpms on", idle)
 
 
 class LiveSessionTest(unittest.TestCase):
