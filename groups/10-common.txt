@@ -36,7 +36,7 @@ ttf-opensans
 inter-font
 
 # Скриншоты, обои, буфер обмена
-swww
+awww
 grim
 slurp
 wl-clipboard

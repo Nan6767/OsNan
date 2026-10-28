@@ -60,4 +60,10 @@ file_permissions=(
     ["/usr/lib/flyarchos/flyarchos-clean"]="0:0:755"
     ["/usr/lib/flyarchos/flyarchos-aur"]="0:0:755"
     ["/usr/lib/flyarchos/flyarchos-exe"]="0:0:755"
+    ["/usr/lib/flyarchos/doctor_tool.py"]="0:0:755"
+    ["/usr/lib/flyarchos/theme_tool.py"]="0:0:755"
+    ["/usr/lib/flyarchos/flyarchos-info"]="0:0:755"
+    ["/usr/lib/flyarchos/flyarchos-install"]="0:0:755"
+    ["/usr/lib/flyarchos/flyarchos-snapshot"]="0:0:755"
+    ["/usr/lib/flyarchos/flyarchos-update"]="0:0:755"
 )

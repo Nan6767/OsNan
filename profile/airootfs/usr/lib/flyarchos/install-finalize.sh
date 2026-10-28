@@ -154,7 +154,7 @@ if [ ! -f /boot/grub/grub.cfg ] && [ ! -d /boot/loader/entries ] && [ ! -d /boot
         done
         run grub-mkconfig -o /boot/grub/grub.cfg
     else
-        rootdev=$(findmnt -no SOURCE / 2>/dev/null | sed 's/[0-9]*$//')
+        rootdev=$(findmnt -no SOURCE / 2>/dev/null | sed -E 's/p?[0-9]+$//')
         if [ -n "$rootdev" ]; then
             run grub-install --target=i386-pc --recheck "$rootdev"
             run grub-mkconfig -o /boot/grub/grub.cfg

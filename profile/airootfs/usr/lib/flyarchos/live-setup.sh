@@ -41,6 +41,9 @@ if [ -f "$THEME_CONF" ]; then
 fi
 
 # machine-id и random-seed должны родиться при первой загрузке.
+# Связка ключей pacman не должна наследоваться от сборочного хоста:
+# при первой загрузке её заново создаст pacman-init.service.
+rm -rf /etc/pacman.d/gnupg 2>/dev/null || true
 : > /etc/machine-id 2>/dev/null || true
 rm -f /var/lib/systemd/random-seed 2>/dev/null || true
 

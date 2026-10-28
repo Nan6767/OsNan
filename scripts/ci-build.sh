@@ -161,6 +161,37 @@ if ! sfs_grep /usr/lib/locale/locale-archive 'ru_RU'; then
 fi
 unsquashfs -l "$SFS" /etc/systemd/system/display-manager.service >/dev/null 2>&1 || fail_iso "нет display-manager.service (SDDM не включён)"
 unsquashfs -l "$SFS" /home/fly >/dev/null 2>&1 || fail_iso "нет домашнего каталога /home/fly"
+# Права на исполнение инструментов: оверлей теряет +x без file_permissions,
+# а симлинки /usr/bin/flyarchos-* тогда ведут в Permission denied.
+for tool in profile_tool.py wallpaper_tool.py wallpapers.py welcome-gui.py \
+            doctor_tool.py theme_tool.py backup_tool.py \
+            flyarchos-info flyarchos-install flyarchos-update flyarchos-snapshot \
+            flyarchos-clean flyarchos-aur flyarchos-exe \
+            install-prepare.sh install-finalize.sh live-setup.sh; do
+    line="$(unsquashfs -ll "$SFS" "/usr/lib/flyarchos/$tool" 2>/dev/null | grep -a "$tool" | head -1)"
+    case "$line" in
+        -rwx*) : ;;
+        *) fail_iso "нет права на исполнение: /usr/lib/flyarchos/$tool" ;;
+    esac
+done
+# fly состоит в wheel — иначе в live мертвы sudo и запуск установщика
+sfs_grep /etc/group '^wheel:.*fly' || fail_iso "fly не входит в группу wheel"
+# Автологин SDDM настроен на fly
+sfs_grep /etc/sddm.conf.d/zz-live-autologin.conf 'User=fly' || fail_iso "нет автологина SDDM (User=fly)"
+# Образы ядер для prepare (он копирует их в /boot целевой системы)
+unsquashfs -l "$SFS" /usr/lib/modules 2>/dev/null | grep -a '/vmlinuz' >/dev/null 2>&1 || fail_iso "нет /usr/lib/modules/*/vmlinuz"
+# В образе не должно быть приватных ключей pacman сборочного хоста
+if unsquashfs -l "$SFS" /etc/pacman.d/gnupg 2>/dev/null | grep -ai 'private-keys' >/dev/null 2>&1; then
+    fail_iso "в образе приватные ключи pacman сборочного хоста"
+fi
+unsquashfs -l "$SFS" /etc/systemd/system/multi-user.target.wants/pacman-init.service >/dev/null 2>&1 || fail_iso "pacman-init.service не включён"
+# Вложенные конфиги домашнего каталога принадлежат fly (1000), а не root
+rm -rf /tmp/homeprobe
+unsquashfs -q -d /tmp/homeprobe "$SFS" /home/fly/.config/hypr/hyprland.conf >/dev/null 2>&1 || true
+homeuid="$(stat -c %u /tmp/homeprobe/home/fly/.config/hypr/hyprland.conf 2>/dev/null || echo '?')"
+[ "$homeuid" = "1000" ] || fail_iso "конфиги в /home/fly принадлежат uid=$homeuid, а не 1000"
+# Демон обоев Hyprland
+unsquashfs -l "$SFS" /usr/bin/awww >/dev/null 2>&1 || fail_iso "нет /usr/bin/awww (обои Hyprland)"
 echo "  образ проверен: live-сессия на месте"
 
 log "Результат"

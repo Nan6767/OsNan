@@ -436,6 +436,59 @@ class WineBottleTest(unittest.TestCase):
             self.assertEqual(self._run_tool(tmp, "bottle", "remove", "ghost").returncode, 1)
 
 
+class AuditRegressionTest(unittest.TestCase):
+    """Регрессии из аудита образов №40/41: права на исполнение утилит,
+    пароль root и ядра на целевой системе, связка ключей pacman,
+    демон обоев awww вместо переименованного swww."""
+
+    AI = REPO / "profile" / "airootfs"
+
+    def test_all_tools_executable_in_image(self):
+        import re
+
+        profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
+        perms = dict(re.findall(r'\["([^"]+)"\]="([^"]+)"', profiledef))
+        tools = self.AI / "usr" / "lib" / "flyarchos"
+        for f in sorted(tools.iterdir()):
+            if f.is_file() and f.read_bytes()[:2] == b"#!":
+                entry = perms.get(f"/usr/lib/flyarchos/{f.name}", "")
+                self.assertTrue(entry.endswith(":755"),
+                                f"{f.name}: нет 755 в file_permissions")
+
+    def test_prepare_target_safety(self):
+        prep = (self.AI / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        # root не наследует известный live-пароль flyarchos
+        self.assertIn("usermod -p '!' root", prep)
+        # ядра восстанавливаются в /boot из /usr/lib/modules
+        self.assertIn("/usr/lib/modules", prep)
+        self.assertIn("vmlinuz-linux", prep)
+        # у установленной системы своя связка ключей pacman
+        self.assertIn("pacman-key --init", prep)
+        self.assertIn("pacman-key --populate", prep)
+
+    def test_pacman_init_live(self):
+        unit = self.AI / "etc" / "systemd" / "system" / "pacman-init.service"
+        self.assertTrue(unit.is_file())
+        self.assertIn("pacman-key --init", unit.read_text(encoding="utf-8"))
+        wants = (self.AI / "etc" / "systemd" / "system"
+                 / "multi-user.target.wants" / "pacman-init.service")
+        self.assertTrue(wants.is_symlink())
+        setup = (self.AI / "usr" / "lib" / "flyarchos"
+                 / "live-setup.sh").read_text(encoding="utf-8")
+        self.assertIn("rm -rf /etc/pacman.d/gnupg", setup)
+
+    def test_wallpaper_daemon_is_awww(self):
+        conf = (self.AI / "etc" / "skel" / ".config" / "hypr"
+                / "hyprland.conf").read_text(encoding="utf-8")
+        self.assertIn("awww-daemon", conf)
+        self.assertNotIn("swww", conf)
+        groups = "\n".join(p.read_text(encoding="utf-8")
+                            for p in (REPO / "groups").glob("*.txt"))
+        self.assertRegex(groups, r"(?m)^awww$")
+        self.assertNotRegex(groups, r"(?m)^swww$")
+
+
 class LiveSessionTest(unittest.TestCase):
     """Live-сессия без customize_airootfs.sh (archiso 91+ его не выполняет).
 

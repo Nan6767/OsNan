@@ -50,6 +50,22 @@ if [ -d /usr/share/flyarchos/mkinitcpio ]; then
     done
 fi
 
+# --- 2б. Образы ядер в /boot ------------------------------------------------
+# mkarchiso уносит содержимое /boot из squashfs на ISO, поэтому в целевой
+# системе может не быть vmlinuz-*, а пресетам mkinitcpio нужен
+# /boot/vmlinuz-<ядро>. Восстанавливаем из /usr/lib/modules, если нет.
+say "Проверка ядер в /boot"
+for v in /usr/lib/modules/*/vmlinuz; do
+    [ -f "$v" ] || continue
+    case "$v" in
+        *lts*) dest=/boot/vmlinuz-linux-lts ;;
+        *)     dest=/boot/vmlinuz-linux ;;
+    esac
+    if [ ! -f "$dest" ]; then
+        run install -Dm 644 "$v" "$dest"
+    fi
+done
+
 # --- 3. Удаляем live-пользователя, чтобы новый получил uid 1000 -----------
 if id -u fly >/dev/null 2>&1; then
     say "Удаление live-пользователя fly"
@@ -57,12 +73,23 @@ if id -u fly >/dev/null 2>&1; then
 fi
 rm -rf /home/fly
 
+# Root не должен наследовать известный live-пароль (flyarchos). Блокируем
+# парольный вход root; модуль users Calamares при выбранной пользователем
+# галочке позже поставит root пароль основного пользователя.
+run usermod -p '!' root
+
 # --- 4. Сбрасываем идентификаторы, которые должны быть уникальными --------
 say "Сброс machine-id и случайных seed"
 : > /etc/machine-id
 rm -f /var/lib/dbus/machine-id
 rm -f /var/lib/systemd/random-seed
 rm -f /var/lib/urandom/random-seed
+
+# Своя связка ключей pacman: в squashfs её нет намеренно (ключи сборочного
+# хоста не должны попадать в образ; в live её создаёт pacman-init.service).
+say "Инициализация связки ключей pacman"
+run pacman-key --init
+run pacman-key --populate archlinux
 
 # --- 5. Службы установленной системы --------------------------------------
 say "Включение служб"
