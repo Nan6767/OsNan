@@ -145,10 +145,15 @@ if [ -z "$SFS" ]; then
 fi
 fail_iso() { echo "ОШИБКА ОБРАЗА: $1"; exit 1; }
 sfs_cat() { unsquashfs -cat "$SFS" "$1" 2>/dev/null; }
-sfs_cat /etc/passwd | grep -q '^fly:' || fail_iso "нет пользователя fly в /etc/passwd"
-sfs_cat /etc/shadow | grep -qE '^fly:\$' || fail_iso "у fly не задан пароль в /etc/shadow"
-sfs_cat /usr/lib/os-release | grep -qi 'FlyArchOs' || fail_iso "os-release не брендирован (хук live-setup не сработал)"
-if ! { sfs_cat /usr/lib/locale/locale-archive | grep -aq 'ru_RU' || unsquashfs -l "$SFS" /usr/lib/locale 2>/dev/null | grep -q 'ru_RU'; }; then
+# grep без флага -q: читает поток до конца. С -q он закрывает трубу на
+# первом совпадении, unsquashfs получает SIGPIPE, и при pipefail вся
+# проверка падает, хотя совпадение было (так падала проверка локали).
+sfs_grep() { sfs_cat "$1" | grep -ai "$2" >/dev/null 2>&1; }
+sfs_grep /etc/passwd '^fly:' || fail_iso "нет пользователя fly в /etc/passwd"
+sfs_grep /etc/shadow '^fly:$' && fail_iso "у fly пустой пароль в /etc/shadow"
+sfs_grep /etc/shadow '^fly:\$' || fail_iso "у fly не задан пароль в /etc/shadow"
+sfs_grep /usr/lib/os-release 'FlyArchOs' || fail_iso "os-release не брендирован (хук live-setup не сработал)"
+if ! sfs_grep /usr/lib/locale/locale-archive 'ru_RU'; then
     echo "--- диагностика локалей в образе ---"
     unsquashfs -l "$SFS" /usr/lib/locale 2>&1 | head -30
     sfs_cat /usr/lib/locale/locale-archive | strings | head -20
