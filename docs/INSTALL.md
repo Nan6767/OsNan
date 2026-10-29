@@ -1,5 +1,8 @@
 # Установка FlyArchOs
 
+> Для первого теста актуального бета-кандидата в VirtualBox используйте
+> отдельный пошаговый чек-лист: **[VIRTUALBOX-TEST.md](VIRTUALBOX-TEST.md)**.
+
 ## 1. Загрузка с флешки
 
 1. Запишите ISO: `sudo dd if=flyarchos-2026XX.iso of=/dev/sdX bs=4M status=progress oflag=sync`
@@ -14,7 +17,8 @@
 
 ## 2. Запуск установщика
 
-* Ярлык **Install FlyArchOs** на рабочем столе,
+* Ярлык **Install FlyArchOs** в меню приложений (в Hyprland: `Super+D`, затем
+  поиск по слову `Install`),
 * или `flyarchos-install` в терминале (поднимается Calamares),
 * запасной вариант — `archinstall` (консольный установщик Arch).
 

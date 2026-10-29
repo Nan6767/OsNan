@@ -2,8 +2,8 @@
 """flyarchos-theme — готовые пресеты оформления для Hyprland и KDE Plasma.
 
 Один пресет меняет сразу всё: обои, акцентный цвет Plasma и градиент
-рамок окон Hyprland (~/.config/hypr/theme.conf, подхватывается через
-``source`` в hyprland.conf).
+рамок окон Hyprland (~/.config/hypr/theme.lua, подключается через
+``require("theme")`` в hyprland.lua; Hyprland 0.57+ .conf не читает).
 
     flyarchos-theme list       список пресетов
     flyarchos-theme nord       применить пресет
@@ -33,7 +33,7 @@ PRESETS: dict[str, tuple[str, str, str, str]] = {
 }
 
 STATE = Path.home() / ".config" / "flyarchos" / "theme.json"
-HYPR_THEME = Path.home() / ".config" / "hypr" / "theme.conf"
+HYPR_THEME = Path.home() / ".config" / "hypr" / "theme.lua"
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -92,12 +92,16 @@ def apply_preset(name: str) -> int:
 
     HYPR_THEME.parent.mkdir(parents=True, exist_ok=True)
     HYPR_THEME.write_text(
-        "# FlyArchOs — тема Hyprland (генерируется flyarchos-theme, не править руками)\n"
-        f"# пресет: {name}\n"
-        "general {\n"
-        f"    col.active_border   = rgba({accent}ff) rgba({accent2}ff) 45deg\n"
-        "    col.inactive_border = rgba(24242faa)\n"
-        "}\n",
+        "-- FlyArchOs — тема Hyprland (генерируется flyarchos-theme, не править руками)\n"
+        f"-- пресет: {name}\n"
+        "hl.config({\n"
+        "    general = {\n"
+        "        col = {\n"
+        f"            active_border = {{ colors = {{ \"rgba({accent}ff)\", \"rgba({accent2}ff)\" }}, angle = 45 }},\n"
+        "            inactive_border = \"rgba(24242faa)\",\n"
+        "        },\n"
+        "    },\n"
+        "})\n",
         encoding="utf-8",
     )
     if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") and shutil.which("hyprctl"):

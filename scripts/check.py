@@ -201,14 +201,26 @@ def check_settings(report: Report) -> None:
         if not config.is_file() and module in NEEDS_CONFIG:
             problems.append(f"{entry}: нет modules/{module}.conf")
 
-    # 3. GS-ключи в shellprocess есть у packagechooser
-    chooser_ids = {ident for ident, inst in instances.items() if inst["module"] == "packagechooser"}
+    # 3. GS-ключи в shellprocess пишет только ПОКАЗАННАЯ страница
+    # packagechooser (onLeave). Экземпляра в instances мало: модули вне
+    # sequence/show Calamares вообще не загружает, ключ не появится, и
+    # shellprocess упадёт до запуска команды (регрессия slim/mini №49/№51).
+    shown_chooser_ids: set[str] = set()
+    for phase in settings.get("sequence", []):
+        for entry in phase.get("show", []) or []:
+            if isinstance(entry, str) and entry.startswith("packagechooser@"):
+                shown_chooser_ids.add(entry.split("@", 1)[1])
+    for ident in sorted(shown_chooser_ids):
+        inst = instances.get(ident)
+        if not inst or inst.get("module") != "packagechooser":
+            problems.append(f"packagechooser@{ident}: показан, но экземпляр не packagechooser")
     for path in sorted((CALAMARES / "modules").glob("shellprocess_*.conf")):
         text = path.read_text(encoding="utf-8")
         for key in re.findall(r"\$\{gs\[([^\]]+)\]\}", text):
             if key.startswith("packagechooser_"):
-                if key.split("_", 1)[1] not in chooser_ids:
-                    problems.append(f"{path.name}: GS-ключ {key} без packagechooser-экземпляра")
+                if key.split("_", 1)[1] not in shown_chooser_ids:
+                    problems.append(
+                        f"{path.name}: GS-ключ {key} без показанной страницы packagechooser")
             else:
                 problems.append(f"{path.name}: неизвестный GS-ключ {key}")
     report.add("settings.conf ↔ модули/экземпляры/GS-ключи", not problems, "; ".join(problems))
@@ -300,7 +312,10 @@ def check_shellprocess_targets(report: Report) -> None:
 
 # Эти файлы появляются в airootfs только после pacstrap (их приносит пакет
 # filesystem) — их отсутствие в дереве репозитория не ошибка.
-PACSTRAP_PATHS = {"/etc/shadow", "/etc/gshadow", "/etc/passwd", "/etc/group"}
+PACSTRAP_PATHS = {"/etc/shadow", "/etc/gshadow", "/etc/passwd", "/etc/group",
+    "/root",      # создаёт pacstrap
+    "/home/fly",  # собирает build-iso.sh из /etc/skel
+}
 
 
 def check_file_permissions(report: Report) -> None:
@@ -372,13 +387,13 @@ def check_desktop_files(report: Report) -> None:
     problems = []
     files = sorted(AIROOTFS.glob("usr/share/applications/*.desktop")) + \
         sorted(AIROOTFS.glob("etc/xdg/autostart/*.desktop"))
-    customize = (PROFILE / "customize_airootfs.sh").read_text(encoding="utf-8")
     for path in files:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.startswith("Exec="):
-                binary = line[5:].split()[0].lstrip("/")
-                target = AIROOTFS / binary
-                if not target.exists() and f"/usr/bin/{Path(binary).name}" not in customize:
+                rel = line[5:].split()[0].lstrip("/")
+                target = AIROOTFS / (rel if "/" in rel else f"usr/bin/{rel}")
+                binary = rel
+                if not target.exists():
                     problems.append(f"{path.name}: {binary} не найден")
     report.add(f"Ярлыки .desktop ({len(files)} шт.)", not problems, "; ".join(problems))
 
@@ -386,7 +401,8 @@ def check_desktop_files(report: Report) -> None:
 def check_skel(report: Report) -> None:
     skel = AIROOTFS / "etc" / "skel"
     expected = [
-        ".config/hypr/hyprland.conf",
+        ".config/hypr/hyprland.lua",
+        ".config/hypr/theme.lua",
         ".config/hypr/hypridle.conf",
         ".config/hypr/hyprlock.conf",
         ".config/waybar/config",

@@ -15,7 +15,7 @@ set -uo pipefail
 
 PROFILE_NAME="${1:-slim}"
 WITH_AUR="${2:-}"
-BUILD_PACKAGES="archiso git python python-yaml squashfs-tools libisoburn mtools dosfstools grub efibootmgr rsync"
+BUILD_PACKAGES="archiso git python python-yaml squashfs-tools libisoburn mtools dosfstools grub efibootmgr rsync lua"
 
 log()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m==> ПРЕДУПРЕЖДЕНИЕ:\033[0m %s\n' "$*" >&2; }
@@ -81,6 +81,9 @@ echo "  archiso: $(pacman -Qi archiso 2>/dev/null | awk '/^Version/{print $3}' |
 
 log "Проверка дерева"
 python scripts/check.py || warn "проверка выдала замечания — продолжаем"
+# Синтаксис Lua-конфига Hyprland: одна опечатка — и сессия без автозапуска.
+luac -p profile/airootfs/etc/skel/.config/hypr/hyprland.lua \
+        profile/airootfs/etc/skel/.config/hypr/theme.lua || die "синтаксис Hyprland Lua сломан"
 
 if [ "$WITH_AUR" = "--aur" ]; then
     log "Сборка AUR-пакетов"
@@ -133,6 +136,182 @@ fi
 
 log "Сборка ISO"
 ./scripts/build-iso.sh --clean --profile "$PROFILE_NAME"
+
+# Контроль готового образа: live-сессия обязана существовать
+# (пользователь fly, пароль, дисплей-менеджер, брендинг, локаль).
+# Лучше упасть здесь, чем опубликовать непригодный ISO.
+log "Проверка содержимого образа"
+SFS="$(find work -name airootfs.sfs 2>/dev/null | head -1)"
+if [ -z "$SFS" ]; then
+    xorriso -osirrox on -indev out/*.iso -extract /arch/x86_64/airootfs.sfs /tmp/airootfs.sfs >/dev/null 2>&1 || true
+    SFS=/tmp/airootfs.sfs
+fi
+fail_iso() { echo "ОШИБКА ОБРАЗА: $1"; exit 1; }
+sfs_cat() { unsquashfs -cat "$SFS" "$1" 2>/dev/null; }
+# grep без флага -q: читает поток до конца. С -q он закрывает трубу на
+# первом совпадении, unsquashfs получает SIGPIPE, и при pipefail вся
+# проверка падает, хотя совпадение было (так падала проверка локали).
+sfs_grep() { sfs_cat "$1" | grep -ai "$2" >/dev/null 2>&1; }
+# ВАЖНО: `unsquashfs -l "$SFS" /path` возвращает 0, даже если файла нет
+# (путь — это фильтр, а не требование: просто печатается пустой список).
+# Поэтому существование проверяем по ВЫВОДУ, а не по коду возврата —
+# иначе негативная проверка срабатывает всегда, а позитивные не проверяют
+# ничего (так упала сборка №53 на «оставшемся» hyprland.conf).
+sfs_has() { unsquashfs -l "$SFS" "$1" 2>/dev/null | grep -aF "$1" >/dev/null 2>&1; }
+sfs_grep /etc/passwd '^fly:' || fail_iso "нет пользователя fly в /etc/passwd"
+sfs_grep /etc/shadow '^fly:$' && fail_iso "у fly пустой пароль в /etc/shadow"
+sfs_grep /etc/shadow '^fly:\$' || fail_iso "у fly не задан пароль в /etc/shadow"
+sfs_grep /usr/lib/os-release 'FlyArchOs' || fail_iso "os-release не брендирован (хук live-setup не сработал)"
+if ! sfs_grep /usr/lib/locale/locale-archive 'ru_RU'; then
+    echo "--- диагностика локалей в образе ---"
+    unsquashfs -l "$SFS" /usr/lib/locale 2>&1 | head -30
+    sfs_cat /usr/lib/locale/locale-archive | strings | head -20
+    fail_iso "локаль ru_RU не сгенерирована"
+fi
+sfs_has /etc/systemd/system/display-manager.service || fail_iso "нет display-manager.service (SDDM не включён)"
+sfs_has /home/fly || fail_iso "нет домашнего каталога /home/fly"
+# Права на исполнение инструментов: оверлей теряет +x без file_permissions,
+# а симлинки /usr/bin/flyarchos-* тогда ведут в Permission denied.
+for tool in profile_tool.py wallpaper_tool.py wallpapers.py welcome-gui.py \
+            doctor_tool.py theme_tool.py backup_tool.py \
+            flyarchos-info flyarchos-install flyarchos-update flyarchos-snapshot \
+            flyarchos-clean flyarchos-aur flyarchos-exe \
+            install-prepare.sh install-finalize.sh live-setup.sh; do
+    line="$(unsquashfs -ll "$SFS" "/usr/lib/flyarchos/$tool" 2>/dev/null | grep -a "$tool" | head -1)"
+    case "$line" in
+        -rwx*) : ;;
+        *) fail_iso "нет права на исполнение: /usr/lib/flyarchos/$tool" ;;
+    esac
+done
+# fly состоит в wheel — иначе в live мертвы sudo и запуск установщика
+sfs_grep /etc/group '^wheel:.*fly' || fail_iso "fly не входит в группу wheel"
+# Автологин SDDM настроен на fly
+sfs_grep /etc/sddm.conf.d/zz-live-autologin.conf 'User=fly' || fail_iso "нет автологина SDDM (User=fly)"
+# Образы ядер для prepare (он копирует их в /boot целевой системы)
+unsquashfs -l "$SFS" /usr/lib/modules 2>/dev/null | grep -a '/vmlinuz' >/dev/null 2>&1 || fail_iso "нет /usr/lib/modules/*/vmlinuz"
+# В образе не должно быть приватных ключей pacman сборочного хоста
+if unsquashfs -l "$SFS" /etc/pacman.d/gnupg 2>/dev/null | grep -ai 'private-keys' >/dev/null 2>&1; then
+    fail_iso "в образе приватные ключи pacman сборочного хоста"
+fi
+sfs_has /etc/systemd/system/multi-user.target.wants/pacman-init.service || fail_iso "pacman-init.service не включён"
+# Вложенные конфиги домашнего каталога принадлежат fly (1000), а не root
+rm -rf /tmp/homeprobe
+unsquashfs -q -d /tmp/homeprobe "$SFS" /home/fly/.config/hypr/hyprland.lua >/dev/null 2>&1 || true
+homeuid="$(stat -c %u /tmp/homeprobe/home/fly/.config/hypr/hyprland.lua 2>/dev/null || echo '?')"
+[ "$homeuid" = "1000" ] || fail_iso "конфиги в /home/fly принадлежат uid=$homeuid, а не 1000"
+# Демон обоев Hyprland
+sfs_has /usr/bin/awww || fail_iso "нет /usr/bin/awww (обои Hyprland)"
+# Установщик и модуль выбора наборов физически на месте (AUR-PKGBUILD
+# пропускает packagechooser — build-aur.sh снимает пропуск, здесь контроль)
+sfs_has /usr/bin/calamares || fail_iso "нет /usr/bin/calamares (установщик)"
+sfs_has /usr/lib/calamares/modules/packagechooser || fail_iso "нет модуля packagechooser (страницы выбора в установщике)"
+
+# Hyprland 0.57+ читает только Lua-конфиг. Legacy hyprland.conf в домашнем
+# каталоге означает молча потерянные автозапуск, панель, обои и бинды.
+sfs_has /etc/skel/.config/hypr/hyprland.lua || fail_iso "нет skel hyprland.lua (Hyprland 0.57 не читает .conf)"
+sfs_has /etc/skel/.config/hypr/theme.lua || fail_iso "нет skel theme.lua для Hyprland"
+if sfs_has /etc/skel/.config/hypr/hyprland.conf; then
+    fail_iso "в образе остался legacy hyprland.conf вместо hyprland.lua"
+fi
+sfs_grep /etc/skel/.config/hypr/hyprland.lua 'hl.on("hyprland.start"' || fail_iso "hyprland.lua без автозапуска FlyArchOs"
+if sfs_grep /etc/skel/.config/hypr/hyprland.lua 'exec_cmd.*pamixer'; then
+    fail_iso "hyprland.lua ссылается на pamixer, которого нет в группах пакетов"
+fi
+
+# Менеджер входа и обе сессии физически в образе (имена .desktop менялись
+# между версиями Hyprland/Plasma, а SDDM раньше уезжал с группой Plasma).
+sfs_has /usr/bin/sddm || fail_iso "нет /usr/bin/sddm"
+sfs_has /usr/share/wayland-sessions/hyprland.desktop || fail_iso "нет сессии hyprland.desktop"
+sfs_has /usr/share/wayland-sessions/plasma.desktop || fail_iso "нет сессии plasma.desktop"
+
+# Конфиг pacman УСТАНОВЛЕННОЙ системы: multilib включён, а сборочных
+# file://-репозиториев и mini-NoExtract в нём быть не должно.
+sfs_grep /etc/pacman.conf '^\[multilib\]' || fail_iso "в /etc/pacman.conf образа не включён multilib"
+if sfs_grep /etc/pacman.conf '^Server.*file://'; then
+    fail_iso "в /etc/pacman.conf образа остался сборочный file://-репозиторий"
+fi
+if sfs_grep /etc/pacman.conf '^\[flyarchos\]'; then
+    fail_iso "в /etc/pacman.conf образа осталась сборочная секция [flyarchos]"
+fi
+if sfs_grep /etc/pacman.conf '^NoExtract'; then
+    fail_iso "в /etc/pacman.conf образа остался mini-NoExtract"
+fi
+sfs_grep /etc/pacman.d/mirrorlist '^Server.*https://' || fail_iso "mirrorlist образа без активных https-зеркал"
+# LUKS2+Argon2id GRUB не открывает, а отдельного /boot в авторазметке нет.
+sfs_grep /etc/calamares/modules/partition.conf 'luksGeneration: luks1' || fail_iso "partition.conf не на luksGeneration: luks1 (GRUB+LUKS2 не загрузится)"
+
+# Целостность Calamares именно в УПАКОВАННОМ (уже трансформированном под
+# slim/mini) виде: каждый модуль последовательности существует, а каждый
+# ${gs[packagechooser_*]} в shellprocess пишет показанная страница выбора.
+rm -rf /tmp/calamaresprobe
+unsquashfs -q -d /tmp/calamaresprobe "$SFS" /etc/calamares/settings.conf /etc/calamares/modules >/dev/null 2>&1 || \
+    fail_iso "не удалось распаковать конфиг Calamares для проверки"
+if ! python3 - /tmp/calamaresprobe/etc/calamares > /tmp/calamares-modules.txt <<'PYEOF'
+import re
+import sys
+from pathlib import Path
+
+import yaml
+
+root = Path(sys.argv[1])
+settings = yaml.safe_load((root / "settings.conf").read_text(encoding="utf-8"))
+instances = {item["id"]: item for item in settings.get("instances", [])}
+used: set[str] = set()
+shown_choosers: set[str] = set()
+for phase in settings.get("sequence", []):
+    for kind, entries in phase.items():
+        for entry in entries or []:
+            if "@" in entry:
+                module, ident = entry.split("@", 1)
+                used.add(instances.get(ident, {}).get("module", module))
+                if kind == "show" and module == "packagechooser":
+                    shown_choosers.add(ident)
+            else:
+                used.add(entry)
+
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            yield from strings(item)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from strings(item)
+
+problems = []
+for ident, inst in instances.items():
+    if inst.get("module") != "shellprocess":
+        continue
+    data = yaml.safe_load((root / "modules" / inst["config"]).read_text(encoding="utf-8")) or {}
+    for text in strings(data.get("script", [])):
+        for key in re.findall(r"\$\{gs\[([^\]]+)\]\}", text):
+            if not key.startswith("packagechooser_"):
+                problems.append(f"{inst['config']}: неизвестный GS-ключ {key}")
+            elif key.split("_", 1)[1] not in shown_choosers:
+                problems.append(f"{inst['config']}: GS-ключ {key} без показанной страницы")
+
+bootloader = root / "modules" / "bootloader.conf"
+if bootloader.is_file():
+    data = yaml.safe_load(bootloader.read_text(encoding="utf-8")) or {}
+    var = str(data.get("efiBootLoaderVar") or "")
+    if var.startswith("packagechooser_") and var.split("_", 1)[1] not in shown_choosers:
+        problems.append(f"bootloader.conf: {var} без показанной страницы")
+
+if problems:
+    print("; ".join(problems), file=sys.stderr)
+    raise SystemExit(1)
+print("\n".join(sorted(used)))
+PYEOF
+then
+    fail_iso "Calamares: shellprocess/bootloader ссылаются на GS-ключи непоказанных страниц packagechooser"
+fi
+while IFS= read -r module; do
+    [ -n "$module" ] || continue
+    sfs_has "/usr/lib/calamares/modules/$module/module.desc" || \
+        fail_iso "нет module.desc модуля Calamares: $module"
+done < /tmp/calamares-modules.txt
+echo "  образ проверен: live-сессия на месте"
 
 log "Результат"
 ls -lh out/

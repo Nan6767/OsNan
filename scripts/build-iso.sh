@@ -118,6 +118,24 @@ log "Подготовка рабочего профиля в $WORK/profile"
 rm -rf "$WORK/profile"
 cp -a "$PROFILE" "$WORK/profile"
 
+# КРИТИЧНО: mkarchiso читает ТОЛЬКО packages.x86_64 (или packages) из
+# profiledef — файла packages.aux он не знает и молча игнорирует. До этого
+# фикса Calamares собирался из AUR, попадал в packages.aux… и НИКОГДА не
+# устанавливался в образ, а старая CI-проверка по коду возврата unsquashfs
+# этого не видела. Дописываем реально собранные AUR-пакеты в рабочий список.
+if [ -s "$WORK/profile/packages.aux" ]; then
+    log "  AUR-пакеты из локального репозитория → рабочий packages.x86_64: $(tr '\n' ' ' < "$WORK/profile/packages.aux")"
+    {
+        printf '\n# --- AUR/локальный репозиторий (packages.aux) ---\n'
+        cat "$WORK/profile/packages.aux"
+    } >> "$WORK/profile/packages.x86_64"
+fi
+
+# Домашний каталог live-пользователя собирается из /etc/skel;
+# владельца mkarchiso выставит по /etc/passwd оверлея.
+install -d "$WORK/profile/airootfs/home/fly"
+cp -a "$WORK/profile/airootfs/etc/skel/." "$WORK/profile/airootfs/home/fly/"
+
 # описания групп нужны и установщику (внутри образа)
 mkdir -p "$WORK/profile/airootfs/usr/share/flyarchos/groups"
 cp -a "$REPO_ROOT"/groups/[0-9][0-9]-*.txt "$WORK/profile/airootfs/usr/share/flyarchos/groups/"
@@ -177,12 +195,33 @@ fi
 # --- 7b. slim/mini: скрываем в установщике наборы, которых нет в образе ---
 if [ "$PROFILE_NAME" = "slim" ] || [ "$PROFILE_NAME" = "mini" ]; then
     log "Профиль $PROFILE_NAME: убираем страницу «Наборы ПО» из установщика"
-    python3 - "$WORK/profile/airootfs/etc/calamares/settings.conf" <<'PY'
+    python3 - "$WORK/profile/airootfs/etc/calamares/settings.conf" \
+              "$WORK/profile/airootfs/etc/calamares/modules/shellprocess_profile.conf" <<'PY'
 import re, sys
-path = sys.argv[1]
-text = open(path, encoding="utf-8").read()
+
+settings_path, profile_path = sys.argv[1:3]
+text = open(settings_path, encoding="utf-8").read()
 text = re.sub(r"^[ \t]*- packagechooser@(extras|preset)\n", "", text, flags=re.M)
-open(path, "w", encoding="utf-8").write(text)
+open(settings_path, "w", encoding="utf-8").write(text)
+
+# Страниц preset/extras в slim/mini нет, значит Calamares не создаст
+# GS-ключи packagechooser_preset/packagechooser_extras. Оставлять их
+# в команде shellprocess нельзя: Calamares упадёт ещё ДО запуска команды
+# ("commands use variables that are not defined") — так ломались №49/№51.
+text = open(profile_path, encoding="utf-8").read()
+text = text.replace(
+    "--preset=${gs[packagechooser_preset]} --extras=${gs[packagechooser_extras]}",
+    "--preset=custom --extras=",
+)
+text = text.replace(
+    "# ${gs[packagechooser_desktop]} и ${gs[packagechooser_extras]} подставляет\n"
+    "# сам Calamares — это строки вида \"hyprland\" и \"dev,gaming\".",
+    "# slim/mini: страниц preset/extras нет, поэтому здесь только desktop;\n"
+    "# preset/extras заданы пустыми значениями по умолчанию.",
+)
+for key in ("packagechooser_preset", "packagechooser_extras"):
+    assert key not in text, f"в shellprocess_profile остался GS-ключ {key} без страницы выбора"
+open(profile_path, "w", encoding="utf-8").write(text)
 PY
     echo "$PROFILE_NAME" > "$WORK/profile/airootfs/usr/share/flyarchos/profile-variant"
     if [ "$PROFILE_NAME" = "mini" ]; then
@@ -197,6 +236,27 @@ text = re.sub(r"airootfs_image_tool_options=\([^)]*\)",
 text, count=1)
 open(path, "w", encoding="utf-8").write(text)
 PYEOF
+        # Обрезка файлов пакетов для mini — NoExtract в pacman.conf:
+        # локали кроме en/ru, документация, переводы Qt, тесты Python,
+        # прошивки чужого железа, редкие шрифты. Файлы просто не
+        # распаковываются при pacstrap (customize_airootfs.sh нет).
+        log "Профиль mini: NoExtract в pacman.conf (ужимка под 2 ГиБ)"
+        python3 - "$WORK/profile/pacman.conf" <<'PYNOEX'
+import sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+assert "[options]" in text, "в pacman.conf нет секции [options]"
+noextract = (
+    "NoExtract = usr/share/locale/* !usr/share/locale/en* !usr/share/locale/ru* !usr/share/locale/C* !usr/share/locale/locale.alias\n"
+    "NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/info/* usr/share/man/*\n"
+    "NoExtract = usr/share/qt6/translations/*.qm !usr/share/qt6/translations/*_en.qm !usr/share/qt6/translations/*_en_US.qm !usr/share/qt6/translations/*_ru.qm\n"
+    "NoExtract = usr/share/fonts/noto/NotoColorEmoji.ttf usr/share/fonts/noto/NotoSans[A-Z]*.ttf !usr/share/fonts/noto/NotoSansDisplay*.ttf !usr/share/fonts/noto/NotoSansMono*.ttf !usr/share/fonts/noto/NotoSansSymbols*.ttf !usr/share/fonts/noto/NotoSansMath*.ttf usr/share/fonts/noto/NotoSerif[A-Z]*.ttf\n"
+    "NoExtract = usr/lib/firmware/qcom/* usr/lib/firmware/mellanox/* usr/lib/firmware/radeon/* usr/lib/firmware/liquidio/* usr/lib/firmware/netronome/* usr/lib/firmware/cavium/* usr/lib/firmware/myri10ge/*\n"
+    "NoExtract = usr/lib/python3.*/test/*\n"
+)
+text = text.replace("[options]\n", "[options]\n" + noextract, 1)
+open(path, "w", encoding="utf-8").write(text)
+PYNOEX
     fi
 fi
 

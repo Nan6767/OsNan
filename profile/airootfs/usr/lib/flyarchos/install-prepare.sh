@@ -14,6 +14,10 @@ say "=== подготовка системы $(date -Is) ==="
 # --- 1. Убираем всё, что нужно только в live -------------------------------
 say "Удаление live-мусора"
 rm -f /etc/sudoers.d/10-flyarchos-live
+rm -f /etc/pacman.d/hooks/flyarchos-live-setup.hook
+rm -f /usr/lib/flyarchos/live-setup.sh
+rm -f /usr/lib/sysusers.d/flyarchos-live.conf
+rm -f /etc/flyarchos-live-setup.done
 rm -f /etc/sddm.conf.d/zz-live-autologin.conf
 rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
 rm -rf /etc/systemd/system/getty@tty1.service.d
@@ -33,14 +37,45 @@ rm -f /etc/motd
 # --- 2. Обычные mkinitcpio-пресеты вместо archiso-овских ------------------
 say "mkinitcpio: обычные пресеты"
 rm -f /etc/mkinitcpio-archiso.conf
+# Live-хуки archiso не должны попасть в initramfs установленной системы
+rm -f /etc/mkinitcpio.conf.d/archiso.conf
+# Включаем обратно gpt-auto-generator (в live он заглушён)
+rm -f /etc/systemd/system-generators/systemd-gpt-auto-generator
 if [ -d /usr/share/flyarchos/mkinitcpio ]; then
     install -Dm 644 /usr/share/flyarchos/mkinitcpio/mkinitcpio.conf /etc/mkinitcpio.conf
+    # Пресет ставим только для реально установленного ядра: mkinitcpio -P
+    # (модуль initcpio настроен на kernel: all) падает на пресете без ядра.
+    has_main=0; has_lts=0
+    for v in /usr/lib/modules/*/vmlinuz; do
+        [ -f "$v" ] || continue
+        case "$v" in *lts*) has_lts=1 ;; *) has_main=1 ;; esac
+    done
     for preset in linux linux-lts; do
+        case "$preset" in
+            linux)     [ "$has_main" = 1 ] || { say "  ядро linux не установлено — пресет пропущен"; continue; } ;;
+            linux-lts) [ "$has_lts" = 1 ]  || { say "  ядро linux-lts не установлено — пресет пропущен"; continue; } ;;
+        esac
         if [ -f "/usr/share/flyarchos/mkinitcpio/${preset}.preset" ]; then
             install -Dm 644 "/usr/share/flyarchos/mkinitcpio/${preset}.preset" "/etc/mkinitcpio.d/${preset}.preset"
         fi
     done
 fi
+
+# --- 2б. Образы ядер в /boot ------------------------------------------------
+# mkarchiso уносит содержимое /boot из squashfs на ISO, поэтому в целевой
+# системе может не быть vmlinuz-*, а пресетам mkinitcpio нужен
+# /boot/vmlinuz-<ядро>. Восстанавливаем из /usr/lib/modules, если нет.
+say "Проверка ядер в /boot"
+for v in /usr/lib/modules/*/vmlinuz; do
+    [ -f "$v" ] || continue
+    case "$v" in
+        *lts*) dest=/boot/vmlinuz-linux-lts ;;
+        *)     dest=/boot/vmlinuz-linux ;;
+    esac
+    if [ ! -f "$dest" ]; then
+        run install -Dm 644 "$v" "$dest"
+    fi
+done
 
 # --- 3. Удаляем live-пользователя, чтобы новый получил uid 1000 -----------
 if id -u fly >/dev/null 2>&1; then
@@ -49,6 +84,11 @@ if id -u fly >/dev/null 2>&1; then
 fi
 rm -rf /home/fly
 
+# Root не должен наследовать известный live-пароль (flyarchos). Блокируем
+# парольный вход root; модуль users Calamares при выбранной пользователем
+# галочке позже поставит root пароль основного пользователя.
+run usermod -p '!' root
+
 # --- 4. Сбрасываем идентификаторы, которые должны быть уникальными --------
 say "Сброс machine-id и случайных seed"
 : > /etc/machine-id
@@ -56,13 +96,19 @@ rm -f /var/lib/dbus/machine-id
 rm -f /var/lib/systemd/random-seed
 rm -f /var/lib/urandom/random-seed
 
+# Своя связка ключей pacman: в squashfs её нет намеренно (ключи сборочного
+# хоста не должны попадать в образ; в live её создаёт pacman-init.service).
+say "Инициализация связки ключей pacman"
+run pacman-key --init
+run pacman-key --populate archlinux
+
 # --- 5. Службы установленной системы --------------------------------------
 say "Включение служб"
 for unit in NetworkManager.service sddm.service bluetooth.service \
             systemd-timesyncd.service systemd-oomd.service; do
     run systemctl enable "$unit"
 done
-for unit in cups.service avahi-daemon.service snapper-timeline.timer \
+for unit in cups.service avahi-daemon.service \
             systemd-zram-setup@zram0.service; do
     systemctl enable "$unit" >>"$LOG" 2>&1 || say "  служба недоступна: $unit"
 done

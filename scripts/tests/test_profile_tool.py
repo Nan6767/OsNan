@@ -162,6 +162,23 @@ class RealGroupsTest(unittest.TestCase):
         for group in ("dev", "media", "office"):
             self.assertIn(group, plan)
 
+    def test_sddm_survives_every_desktop_choice(self):
+        # SDDM — единственный менеджер входа для обеих сессий. Когда он
+        # жил в группе plasma, установка «только Hyprland» удаляла его
+        # вместе с Plasma и система оставалась без графического входа.
+        self.assertIn("sddm", self.groups["common"])
+        self.assertNotIn("sddm", self.groups["plasma"])
+        for desktop in ("hyprland", "plasma", "both"):
+            plan = profile_tool.packages_to_remove(
+                self.groups, profile_tool.kept_groups(desktop, [], True))
+            removed = set(sum(plan.values(), []))
+            self.assertNotIn("sddm", removed, f"sddm удаляется при выборе {desktop}")
+
+    def test_live_only_installer_package_is_explicit(self):
+        # Calamares приходит из AUR (packages.aux) и в нумерованные
+        # группы не входит, поэтому profile_tool удаляет его явно.
+        self.assertIn("calamares", profile_tool.LIVE_ONLY_PACKAGES)
+
     def test_dolphin_survives_hyprland_only(self):
         """Dolphin тянется Plasma — но он же файловый менеджер KDE-приложений."""
         plan = profile_tool.packages_to_remove(self.groups, profile_tool.kept_groups("hyprland", [], True))
@@ -241,6 +258,15 @@ class ThemePresetsTest(unittest.TestCase):
             self.assertEqual(len(theme_tool.hex_to_rgb(accent2)), 3)
 
 
+class ThemeLuaTest(unittest.TestCase):
+    def test_theme_writes_lua_not_legacy_conf(self):
+        # Hyprland 0.57+ не читает .conf: тема обязана быть Lua.
+        self.assertEqual(theme_tool.HYPR_THEME.name, "theme.lua")
+        source = Path(theme_tool.__file__).read_text(encoding="utf-8")
+        self.assertIn("hl.config", source)
+        self.assertNotIn("col.active_border   =", source)
+
+
 class BackupToolTest(unittest.TestCase):
     """Резервное копирование без rsync (запасной копировщик) на временном доме."""
 
@@ -317,8 +343,9 @@ class VersionTest(unittest.TestCase):
         branding = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "branding"
                     / "flyarchos" / "branding.desc").read_text(encoding="utf-8")
         self.assertIn(f'"{ver}"', branding)
-        customize = (REPO / "profile" / "customize_airootfs.sh").read_text(encoding="utf-8")
-        self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", customize)
+        setup = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+                 / "live-setup.sh").read_text(encoding="utf-8")
+        self.assertIn("install -Dm644 /usr/share/flyarchos/os-release /usr/lib/os-release", setup)
 
 
 class InstallerFinalizeTest(unittest.TestCase):
@@ -433,6 +460,271 @@ class WineBottleTest(unittest.TestCase):
             self.assertEqual(self._run_tool(tmp, "bottle", "create", "default").returncode, 2)
             self.assertEqual(self._run_tool(tmp, "bottle", "remove", "default").returncode, 2)
             self.assertEqual(self._run_tool(tmp, "bottle", "remove", "ghost").returncode, 1)
+
+
+class AuditRegressionTest(unittest.TestCase):
+    """Регрессии из аудита образов №40/41: права на исполнение утилит,
+    пароль root и ядра на целевой системе, связка ключей pacman,
+    демон обоев awww вместо переименованного swww."""
+
+    AI = REPO / "profile" / "airootfs"
+
+    def test_all_tools_executable_in_image(self):
+        import re
+
+        profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
+        perms = dict(re.findall(r'\["([^"]+)"\]="([^"]+)"', profiledef))
+        tools = self.AI / "usr" / "lib" / "flyarchos"
+        for f in sorted(tools.iterdir()):
+            if f.is_file() and f.read_bytes()[:2] == b"#!":
+                entry = perms.get(f"/usr/lib/flyarchos/{f.name}", "")
+                self.assertTrue(entry.endswith(":755"),
+                                f"{f.name}: нет 755 в file_permissions")
+
+    def test_initcpio_all_kernels(self):
+        conf = (self.AI / "etc" / "calamares" / "modules"
+                / "initcpio.conf").read_text(encoding="utf-8")
+        # иначе в полном образе не соберётся initramfs для linux-lts
+        self.assertIn("kernel: all", conf)
+        prep = (self.AI / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        # а пресет для отсутствующего ядра уронит mkinitcpio -P
+        self.assertIn("пресет пропущен", prep)
+
+    def test_no_snapper_timers_without_config(self):
+        # таймеры включает flyarchos-snapshot setup после создания конфига
+        svc = (self.AI / "etc" / "calamares" / "modules"
+               / "services-systemd.conf").read_text(encoding="utf-8")
+        self.assertNotIn("snapper-timeline", svc)
+        prep = (self.AI / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        self.assertNotIn("snapper-timeline", prep)
+
+    def test_installer_actually_present(self):
+        # AUR-PKGBUILD пропускает packagechooser: build-aur обязан снять
+        # пропуск, а CI — проверить бинарь и модуль в готовом образе,
+        # иначе Calamares не стартует из-за отсутствующего модуля.
+        build_aur = (REPO / "scripts" / "build-aur.sh").read_text(encoding="utf-8")
+        self.assertIn('"$pkg" = "calamares"', build_aur)
+        self.assertIn("packagechooser", build_aur)
+        ci = (REPO / "scripts" / "ci-build.sh").read_text(encoding="utf-8")
+        self.assertIn("/usr/bin/calamares", ci)
+        self.assertIn("modules/packagechooser", ci)
+        # и вообще каждый модуль последовательности + GS-инвариант
+        self.assertIn("module.desc", ci)
+        self.assertIn("shown_choosers", ci)
+        # unsquashfs -l <путь> возвращает 0 и без файла — существование
+        # проверяется по выводу (sfs_has), иначе проверки врут в обе стороны
+        self.assertIn("sfs_has()", ci)
+        self.assertIn("grep -aF", ci)
+
+    def test_profile_cli_dry_run(self):
+        """Реальный вызов CLI, как в shellprocess@profile (без --apply).
+
+        Регрессия: основной парсер создаёт remove_live, а cmd_apply читал
+        args.keep_live — установщик падал с AttributeError на любом образе.
+        """
+        import subprocess
+
+        proc = subprocess.run(
+            [sys.executable, str(PROFILE_TOOL), "--groups-dir", str(REPO / "groups"),
+             "--desktop=hyprland", "--preset=custom", "--extras=", "--remove-live"],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
+        self.assertNotIn("AttributeError", proc.stderr)
+        # установщик из AUR удаляется явно, а не через нумерованные группы
+        self.assertIn("calamares", proc.stderr)
+
+    def test_slim_mini_profile_command_rewrite(self):
+        # В slim/mini страниц preset/extras нет — GS-ключей не будет, и
+        # build-iso обязан убрать их из команды shellprocess@profile.
+        build = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn("shellprocess_profile.conf", build)
+        self.assertIn("--preset=custom --extras=", build)
+        self.assertIn("assert key not in text", build)
+
+    def test_aux_packages_merged_into_mkarchiso_list(self):
+        # mkarchiso читает только packages.x86_64; packages.aux игнорируется.
+        # Регрессия №55: Calamares собирался, но в образ не устанавливался.
+        build = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn('cat "$WORK/profile/packages.aux"', build)
+        self.assertIn('>> "$WORK/profile/packages.x86_64"', build)
+
+    def test_target_pacman_config_and_mirrors(self):
+        conf = (self.AI / "etc" / "pacman.conf").read_text(encoding="utf-8")
+        self.assertIn("[multilib]", conf)
+        for line in conf.splitlines():
+            stripped = line.strip()
+            self.assertFalse(stripped.startswith("Server") and "file://" in stripped, line)
+            self.assertFalse(stripped.startswith("NoExtract"), line)
+            self.assertNotEqual(stripped, "[flyarchos]")
+        mirrors = (self.AI / "etc" / "pacman.d" / "mirrorlist").read_text(encoding="utf-8")
+        self.assertRegex(mirrors, r"(?m)^Server = https://")
+        template = (REPO / "profile" / "pacman.conf.in").read_text(encoding="utf-8")
+        self.assertEqual(template.count("@FLYARCHOS_REPO@"), 1)
+
+    def test_luks1_for_grub(self):
+        conf = (self.AI / "etc" / "calamares" / "modules"
+                / "partition.conf").read_text(encoding="utf-8")
+        self.assertIn("luksGeneration: luks1", conf)
+        self.assertNotIn("luksGeneration: luks2", conf)
+
+    def test_finalize_checks_real_bootloader_and_sddm_theme(self):
+        fin = (self.AI / "usr" / "lib" / "flyarchos"
+               / "install-finalize.sh").read_text(encoding="utf-8")
+        # загрузчик: артефакты на ESP и повтор bootctl, а не один grub.cfg
+        self.assertIn("systemd_boot_entries_ok", fin)
+        self.assertIn("bootctl --path", fin)
+        self.assertIn("lsblk -dn -o PKNAME", fin)  # диск BIOS через родителей
+        # тема SDDM выбирается из фактически оставшихся после профиля
+        self.assertIn("elarun", fin)
+        self.assertIn("zz-flyarchos-finalize.conf", fin)
+        # страховочное удаление установщика из целевой системы
+        self.assertIn("pacman -Rns", fin)
+        self.assertIn("flyarchos-install.desktop", fin)
+
+    def test_prepare_target_safety(self):
+        prep = (self.AI / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        # root не наследует известный live-пароль flyarchos
+        self.assertIn("usermod -p '!' root", prep)
+        # ядра восстанавливаются в /boot из /usr/lib/modules
+        self.assertIn("/usr/lib/modules", prep)
+        self.assertIn("vmlinuz-linux", prep)
+        # у установленной системы своя связка ключей pacman
+        self.assertIn("pacman-key --init", prep)
+        self.assertIn("pacman-key --populate", prep)
+
+    def test_pacman_init_live(self):
+        unit = self.AI / "etc" / "systemd" / "system" / "pacman-init.service"
+        self.assertTrue(unit.is_file())
+        self.assertIn("pacman-key --init", unit.read_text(encoding="utf-8"))
+        wants = (self.AI / "etc" / "systemd" / "system"
+                 / "multi-user.target.wants" / "pacman-init.service")
+        self.assertTrue(wants.is_symlink())
+        setup = (self.AI / "usr" / "lib" / "flyarchos"
+                 / "live-setup.sh").read_text(encoding="utf-8")
+        self.assertIn("rm -rf /etc/pacman.d/gnupg", setup)
+
+    def test_wallpaper_daemon_is_awww(self):
+        conf = (self.AI / "etc" / "skel" / ".config" / "hypr"
+                / "hyprland.lua").read_text(encoding="utf-8")
+        self.assertIn("awww-daemon", conf)
+        self.assertNotIn("swww", conf)
+        groups = "\n".join(p.read_text(encoding="utf-8")
+                            for p in (REPO / "groups").glob("*.txt"))
+        self.assertRegex(groups, r"(?m)^awww$")
+        self.assertNotRegex(groups, r"(?m)^swww$")
+
+    def test_hyprland_config_is_lua(self):
+        # Hyprland 0.57 убрал поддержку .conf: с legacy-конфигом сессия
+        # стартует без автозапуска, панели, обоев и наших биндов.
+        hypr = self.AI / "etc" / "skel" / ".config" / "hypr"
+        lua = (hypr / "hyprland.lua").read_text(encoding="utf-8")
+        self.assertFalse((hypr / "hyprland.conf").exists())
+        self.assertFalse((hypr / "theme.conf").exists())
+        theme = (hypr / "theme.lua").read_text(encoding="utf-8")
+        self.assertIn("hl.config", theme)
+        for needle in ('hl.on("hyprland.start"', "hl.bind", "hl.monitor",
+                       'require("theme")', "wpctl set-volume",
+                       "flyarchos-welcome --autostart", "waybar"):
+            self.assertIn(needle, lua)
+        for legacy in ("exec-once", "windowrulev2", "source =", "pamixer -"):
+            self.assertNotIn(legacy, lua)
+        idle = (hypr / "hypridle.conf").read_text(encoding="utf-8")
+        self.assertIn("hl.dsp.dpms", idle)
+        self.assertNotIn("dispatch dpms on", idle)
+
+
+class LiveSessionTest(unittest.TestCase):
+    """Live-сессия без customize_airootfs.sh (archiso 91+ его не выполняет).
+
+    Пользователь, пароли, sudo и службы заданы статичными файлами
+    оверлея; сборочные действия выполняет pacman-хук live-setup.
+    """
+
+    AI = REPO / "profile" / "airootfs"
+
+    def test_no_customize_script(self):
+        self.assertFalse((REPO / "profile" / "customize_airootfs.sh").exists())
+
+    def test_live_user_static(self):
+        passwd = (self.AI / "etc" / "passwd").read_text(encoding="utf-8")
+        self.assertIn("root:x:0:0:", passwd)
+        self.assertIn("fly:x:1000:1000:", passwd)
+        shadow = (self.AI / "etc" / "shadow").read_text(encoding="utf-8")
+        for user in ("root", "fly"):
+            line = [ln for ln in shadow.splitlines()
+                    if ln.startswith(user + ":")][0]
+            self.assertTrue(line.split(":")[1].startswith("$"), user)
+        sysusers = (self.AI / "usr" / "lib" / "sysusers.d"
+                    / "flyarchos-live.conf").read_text(encoding="utf-8")
+        self.assertIn("m fly wheel", sysusers)
+
+    def test_live_hook_and_sudo(self):
+        hook = (self.AI / "etc" / "pacman.d" / "hooks"
+                / "flyarchos-live-setup.hook").read_text(encoding="utf-8")
+        self.assertIn("live-setup.sh", hook)
+        setup = (self.AI / "usr" / "lib" / "flyarchos"
+                 / "live-setup.sh").read_text(encoding="utf-8")
+        self.assertIn("localedef", setup)  # locale.gen бывает пустым
+        sudoers = (self.AI / "etc" / "sudoers.d"
+                   / "10-flyarchos-live").read_text(encoding="utf-8")
+        self.assertIn("NOPASSWD", sudoers)
+        prepare = (self.AI / "usr" / "lib" / "flyarchos"
+                   / "install-prepare.sh").read_text(encoding="utf-8")
+        self.assertIn("rm -f /etc/sudoers.d/10-flyarchos-live", prepare)
+        self.assertIn("flyarchos-live-setup.hook", prepare)
+        self.assertIn("flyarchos-live.conf", prepare)
+
+    def test_services_enabled_by_symlinks(self):
+        system = self.AI / "etc" / "systemd" / "system"
+        dm = system / "display-manager.service"
+        self.assertTrue(dm.is_symlink())
+        self.assertEqual(str(dm.readlink()),
+                         "/usr/lib/systemd/system/sddm.service")
+        self.assertTrue((system / "multi-user.target.wants"
+                         / "NetworkManager.service").is_symlink())
+
+    def test_build_iso_home_and_mini_noextract(self):
+        build = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn("airootfs/home/fly", build)
+        self.assertIn("NoExtract", build)
+
+
+class LiveBootTest(unittest.TestCase):
+    """Live-загрузка: без archiso-хуков ISO падает на Switch Root (баг до 1.7.0)."""
+
+    def test_archiso_hooks_present(self):
+        conf = (REPO / "profile" / "airootfs" / "etc" / "mkinitcpio.conf.d"
+                / "archiso.conf").read_text(encoding="utf-8")
+        self.assertIn("HOOKS=(", conf)
+        for hook in ("archiso", "archiso_loop_mnt", "udev"):
+            self.assertIn(hook, conf)
+
+    def test_initramfs_size_contract(self):
+        # mini должен влезать в один файл <2 ГиБ: initramfs сжат xz,
+        # а UEFI грузится через GRUB (одна копия initramfs, а не две).
+        conf = (REPO / "profile" / "airootfs" / "etc" / "mkinitcpio.conf.d"
+                / "archiso.conf").read_text(encoding="utf-8")
+        self.assertIn('COMPRESSION="xz"', conf)
+        profiledef = (REPO / "profile" / "profiledef.sh").read_text(encoding="utf-8")
+        self.assertIn("'uefi.grub'", profiledef)
+        self.assertNotIn("uefi.systemd-boot", profiledef)
+
+    def test_live_group_has_mkinitcpio_archiso(self):
+        live = (REPO / "groups" / "99-live.txt").read_text(encoding="utf-8")
+        self.assertIn("mkinitcpio-archiso", live)
+
+    def test_prepare_removes_live_hooks(self):
+        prep = (REPO / "profile" / "airootfs" / "usr" / "lib" / "flyarchos"
+                / "install-prepare.sh").read_text(encoding="utf-8")
+        self.assertIn("rm -f /etc/mkinitcpio.conf.d/archiso.conf", prep)
+
+    def test_initcpiocfg_has_no_btrfs_hook(self):
+        conf = (REPO / "profile" / "airootfs" / "etc" / "calamares" / "modules"
+                / "initcpiocfg.conf").read_text(encoding="utf-8")
+        self.assertNotIn("[ btrfs ]", conf)
 
 
 if __name__ == "__main__":

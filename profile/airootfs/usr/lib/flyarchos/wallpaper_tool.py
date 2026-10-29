@@ -107,24 +107,28 @@ def _run(cmd: list[str]) -> bool:
     return subprocess.run(cmd, check=False, capture_output=True).returncode == 0
 
 
-def _ensure_swww() -> None:
-    """Поднять демон swww, если он ещё не запущен."""
-    if _run(["pgrep", "-x", "swww-daemon"]):
-        return
-    if shutil.which("swww-daemon"):
-        subprocess.Popen(
-            ["swww-daemon"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True
-        )
-        import time
+def _wallpaper_client() -> str | None:
+    """Поднять демон обоев и вернуть имя клиента (awww; старое имя — swww)."""
+    import time
 
-        time.sleep(0.7)
+    for client, daemon in (("awww", "awww-daemon"), ("swww", "swww-daemon")):
+        if shutil.which(client) is None and shutil.which(daemon) is None:
+            continue
+        if not _run(["pgrep", "-x", daemon]) and shutil.which(daemon):
+            subprocess.Popen(
+                [daemon], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            time.sleep(0.7)
+        return client
+    return None
 
 
 def apply_hyprland(path: Path, transition: str = "wipe") -> bool:
-    """Hyprland: swww, при отсутствии — hyprpaper."""
-    _ensure_swww()
-    if shutil.which("swww") and _run(
-        ["swww", "img", str(path), "--transition-type", transition, "--transition-fps", "60"]
+    """Hyprland: awww/swww, при отсутствии — hyprpaper."""
+    client = _wallpaper_client()
+    if client and _run(
+        [client, "img", str(path), "--transition-type", transition, "--transition-fps", "60"]
     ):
         return True
     if shutil.which("hyprctl"):

@@ -36,7 +36,7 @@ ttf-opensans
 inter-font
 
 # Скриншоты, обои, буфер обмена
-swww
+awww
 grim
 slurp
 wl-clipboard
@@ -46,6 +46,11 @@ imagemagick
 ffmpeg
 ffmpegthumbs
 tumbler
+
+# Менеджер входа: ОБЯЗАТЕЛЬНО в общей группе, а не в plasma. Иначе
+# установка «только Hyprland» удаляет sddm вместе с группой Plasma,
+# и установленная система остаётся без графического входа.
+sddm
 
 # Мелочи рабочего стола
 playerctl

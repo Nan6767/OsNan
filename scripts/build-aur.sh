@@ -84,6 +84,14 @@ for pkg in "${PACKAGES[@]}"; do
             || { warn "$pkg: не клонируется, пропускаю"; continue; }
     fi
 
+    # Calamares из AUR пропускает модуль packagechooser (страницы выбора
+    # окружения и наборов ПО), а наш установщик на нём построен — без него
+    # Calamares не стартует. Снимаем пропуск в PKGBUILD перед сборкой.
+    if [ "$pkg" = "calamares" ] && grep -qE '^\s*packagechooser\s*$' "$src/PKGBUILD"; then
+        log "$pkg: снимаю пропуск модуля packagechooser в PKGBUILD"
+        sed -i '/^\s*packagechooser\s*$/d' "$src/PKGBUILD"
+    fi
+
     built=0
     if [ -n "$BUILD_USER" ]; then
         chown -R "$BUILD_USER" "$src" 2>/dev/null || true

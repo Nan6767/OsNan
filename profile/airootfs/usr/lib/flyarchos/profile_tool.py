@@ -60,6 +60,11 @@ PRESETS: Dict[str, tuple[str, ...]] = {
 }
 # Пакеты только для live-образа.
 LIVE_GROUP = "live"
+# Calamares ставится из AUR через packages.aux и потому НЕ входит в
+# нумерованные группы (иначе предпроверка CI по официальным репозиториям
+# сочла бы его «отсутствующим» и исключила из вспомогательного списка).
+# Удалять из установленной системы его всё равно обязательно — явно.
+LIVE_ONLY_PACKAGES: tuple[str, ...] = ("calamares",)
 # Порядок удаления: сначала «допы», затем окружения, в конце — live.
 REMOVAL_ORDER: tuple[str, ...] = LIVE_GROUP, "privacy", "office", "media", "gaming", "dev", "plasma", "hyprland"
 
@@ -338,7 +343,11 @@ def cmd_show(args, groups: Dict[str, List[str]]) -> int:
     desktop = normalize_desktop(args.desktop)
     preset = normalize_preset(getattr(args, "preset", "custom"))
     extras = merge_extras(preset, normalize_extras(args.extras))
-    kept = kept_groups(desktop, extras, not args.keep_live)
+    # У основного парсера флаг называется remove_live, у подкоманды show —
+    # keep_live. Раньше здесь читался только keep_live, и реальный CLI-вызов
+    # установщика падал с AttributeError до удаления хоть одного пакета.
+    remove_live = getattr(args, "remove_live", not getattr(args, "keep_live", False))
+    kept = kept_groups(desktop, extras, remove_live)
     plan = packages_to_remove(groups, kept)
     print(f"Окружение:      {desktop}")
     print(f"Пресет:         {preset}")
@@ -359,7 +368,8 @@ def cmd_apply(args, groups: Dict[str, List[str]]) -> int:
     preset = normalize_preset(getattr(args, "preset", "custom"))
     extras = merge_extras(preset, normalize_extras(args.extras))
     dry = not args.apply
-    kept = kept_groups(desktop, extras, not args.keep_live)
+    remove_live = getattr(args, "remove_live", not getattr(args, "keep_live", False))
+    kept = kept_groups(desktop, extras, remove_live)
     plan = packages_to_remove(groups, kept)
 
     print("=" * 68)
@@ -384,6 +394,16 @@ def cmd_apply(args, groups: Dict[str, List[str]]) -> int:
         remove_packages(present, dry)
         removed_all.extend(present)
 
+    # Установщик не описан в нумерованных группах (см. LIVE_ONLY_PACKAGES),
+    # поэтому группа live его не задевает. Без этого Calamares и ярлык
+    # «Установить FlyArchOs» оставались в установленной системе.
+    if remove_live:
+        live_only = [p for p in LIVE_ONLY_PACKAGES if p in have] if have else list(LIVE_ONLY_PACKAGES)
+        if live_only:
+            LOG.info("live-пакеты вне групп: удаляем %s", " ".join(live_only))
+            remove_packages(live_only, dry)
+            removed_all.extend(live_only)
+
     if args.clean_orphans:
         remove_orphans(dry)
 
@@ -395,7 +415,7 @@ def cmd_apply(args, groups: Dict[str, List[str]]) -> int:
             "groups_kept": kept,
             "groups_removed": sorted(plan),
             "packages_removed": removed_all,
-            "remove_live": not args.keep_live,
+            "remove_live": remove_live,
             "timestamp": int(time.time()),
             "version": 1,
         },

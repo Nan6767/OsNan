@@ -7,7 +7,7 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 326
+# Всего пакетов: 327
 # Профиль:  (группы: )
 # --- core (00-core.txt): 118 шт. --------------------
 base
@@ -129,7 +129,7 @@ python-pip
 nodejs
 npm
 
-# --- common (10-common.txt): 42 шт. --------------------
+# --- common (10-common.txt): 43 шт. --------------------
 xorg-xwayland
 xorg-xrandr
 qt5-wayland
@@ -155,7 +155,7 @@ ttf-fira-code
 ttf-roboto
 ttf-opensans
 inter-font
-swww
+awww
 grim
 slurp
 wl-clipboard
@@ -165,6 +165,7 @@ imagemagick
 ffmpeg
 ffmpegthumbs
 tumbler
+sddm
 playerctl
 brightnessctl
 libnotify
@@ -190,7 +191,7 @@ thunar-archive-plugin
 thunar-volman
 xarchiver
 
-# --- plasma (30-plasma.txt): 48 шт. --------------------
+# --- plasma (30-plasma.txt): 47 шт. --------------------
 plasma-meta
 plasma-desktop
 plasma-workspace
@@ -215,7 +216,6 @@ bluedevil
 kde-cli-tools
 kio-extras
 xdg-desktop-portal-kde
-sddm
 sddm-kcm
 dolphin
 dolphin-plugins
@@ -348,11 +348,12 @@ firejail
 ufw
 gufw
 
-# --- live (99-live.txt): 7 шт. --------------------
+# --- live (99-live.txt): 8 шт. --------------------
 archinstall
 clonezilla
 testdisk
 syslinux
 edk2-shell
+mkinitcpio-archiso
 memtest86+
 memtest86+-efi

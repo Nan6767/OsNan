@@ -57,8 +57,13 @@ pick_session() {
     return 1
 }
 
-if [ -d /usr/share/sddm ] || command -v sddm >/dev/null 2>&1; then
+if command -v sddm >/dev/null 2>&1; then
     SESSION=$(pick_session "$DESKTOP" || true)
+    if [ -z "${SESSION:-}" ]; then
+        # Выбранная сессия не нашлась (например, её пакеты удалены) —
+        # берём любую реально оставшуюся, лишь бы вход был графическим.
+        SESSION=$(pick_session plasma || pick_session hyprland || true)
+    fi
     if [ -n "${SESSION:-}" ]; then
         say "SDDM: сессия по умолчанию $SESSION"
         install -d -m 755 /var/lib/sddm
@@ -67,10 +72,171 @@ if [ -d /usr/share/sddm ] || command -v sddm >/dev/null 2>&1; then
 Session=${SESSION}
 EOF
         chown -R sddm:sddm /var/lib/sddm 2>/dev/null || true
+    else
+        say "(!) SDDM: не найдено ни одной графической сессии"
     fi
+
+    # Тема экрана входа обязана существовать после удаления невыбранного
+    # окружения. breeze может исчезнуть вместе с Plasma, а elarun/maldives/
+    # maya поставляет сам пакет sddm (он теперь в обязательной группе).
+    SDDM_THEME=""
+    for cand in breeze elarun maldives maya; do
+        if [ -d "/usr/share/sddm/themes/$cand" ]; then
+            SDDM_THEME="$cand"
+            break
+        fi
+    done
+    if [ -n "$SDDM_THEME" ]; then
+        say "SDDM: тема $SDDM_THEME"
+        install -d -m 755 /etc/sddm.conf.d
+        cat > /etc/sddm.conf.d/zz-flyarchos-finalize.conf <<EOF
+# Записано install-finalize: тема гарантированно существует в системе
+# после применения выбранного профиля окружения.
+[Theme]
+Current=${SDDM_THEME}
+EOF
+    else
+        say "(!) SDDM: не найдено ни одной темы в /usr/share/sddm/themes"
+    fi
+else
+    say "(!) SDDM отсутствует в установленной системе"
 fi
 
-# --- 4. Тема GRUB -----------------------------------------------------------
+# --- 4. Контроль загрузчика по реальным артефактам -------------------------
+# Один лишь /boot/grub/grub.cfg ничего не доказывает: grubcfg создаёт его
+# всегда, а модуль bootloader у Calamares на нескольких путях возвращает
+# «успех», ничего не установив (у systemd-boot ещё и bootctl без проверки
+# кода возврата). Поэтому проверяем файлы на ESP и, при нужде, ставим GRUB.
+EFFECTIVE_BOOTLOADER="unknown"
+
+find_esp() {
+    local d fstype
+    for d in /boot/efi /efi /boot; do
+        [ -d "$d" ] || continue
+        fstype=$(findmnt -no FSTYPE "$d" 2>/dev/null || true)
+        case "$fstype" in
+            vfat|fat|msdos) printf '%s\n' "$d"; return 0 ;;
+        esac
+        if [ -d "$d/EFI" ] || [ -d "$d/loader" ]; then
+            printf '%s\n' "$d"
+            return 0
+        fi
+    done
+    return 1
+}
+
+systemd_boot_entries_ok() {
+    local esp="$1" entry kind path rest
+    [ -f "$esp/loader/loader.conf" ] || return 1
+    entry=$(find "$esp/loader/entries" -maxdepth 1 -type f -name '*.conf' -print -quit 2>/dev/null)
+    if [ -z "${entry:-}" ]; then
+        # UKI (BLS Type#2): отдельные .efi в EFI/Linux тоже загружаемы.
+        compgen -G "$esp/EFI/Linux/*.efi" >/dev/null 2>&1 && return 0
+        return 1
+    fi
+    grep -q '^linux[[:space:]]' "$entry" || return 1
+    while read -r kind path rest; do
+        case "$kind" in
+            linux|initrd)
+                [ -n "${path:-}" ] && [ -f "$esp$path" ] || return 1
+                ;;
+        esac
+    done < "$entry"
+    return 0
+}
+
+systemd_boot_binary_ok() {
+    local esp="$1"
+    [ -f "$esp/EFI/systemd/systemd-bootx64.efi" ] ||
+    [ -f "$esp/EFI/BOOT/BOOTX64.EFI" ] ||
+    [ -f "$esp/EFI/boot/bootx64.efi" ]
+}
+
+has_grub_efi() {
+    local esp="$1" found
+    [ -s /boot/grub/grub.cfg ] || return 1
+    found=$(find "$esp/EFI" -iname 'grubx64.efi' -print -quit 2>/dev/null)
+    [ -n "${found:-}" ]
+}
+
+install_grub_efi() {
+    local esp="$1"
+    command -v grub-install >/dev/null 2>&1 || return 1
+    say "Ставлю GRUB (UEFI) на ESP $esp"
+    if ! grub-install --target=x86_64-efi --efi-directory="$esp" \
+            --bootloader-id=FlyArchOs --recheck >>"$LOG" 2>&1; then
+        say "  обычный grub-install не прошёл — пробую removable/no-nvram"
+        grub-install --target=x86_64-efi --efi-directory="$esp" \
+            --bootloader-id=FlyArchOs --removable --no-nvram --recheck >>"$LOG" 2>&1 || return 1
+    fi
+    grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1
+}
+
+root_disk() {
+    local dev type parent n
+    dev=$(findmnt -no SOURCE / 2>/dev/null || true)
+    dev=${dev%%\[*}   # /dev/sda2[/@] (btrfs-субтом) → /dev/sda2
+    [ -b "${dev:-}" ] || return 1
+    # Идём вверх по родителям: раздел → диск, LUKS-mapper → раздел → диск.
+    # Старый sed 's/p?[0-9]+$//' ломался и на mapper, и на субтоме btrfs.
+    for n in 1 2 3 4 5 6 7 8 9 10; do
+        type=$(lsblk -dn -o TYPE "$dev" 2>/dev/null || true)
+        if [ "$type" = "disk" ]; then
+            printf '%s\n' "$dev"
+            return 0
+        fi
+        parent=$(lsblk -dn -o PKNAME "$dev" 2>/dev/null || true)
+        [ -n "${parent:-}" ] || return 1
+        dev="/dev/$parent"
+        [ -b "$dev" ] || return 1
+    done
+    return 1
+}
+
+say "Проверка загрузчика"
+if [ -d /sys/firmware/efi ]; then
+    ESP=$(find_esp || true)
+    if [ -n "${ESP:-}" ]; then
+        if systemd_boot_entries_ok "$ESP"; then
+            if [ ! -f "$ESP/EFI/systemd/systemd-bootx64.efi" ] && command -v bootctl >/dev/null 2>&1; then
+                say "systemd-boot: записи есть, EFI-бинарника нет — повторяю bootctl install"
+                bootctl --path="$ESP" install >>"$LOG" 2>&1 || say "  (!) bootctl install не отработал"
+            fi
+            if systemd_boot_binary_ok "$ESP"; then
+                EFFECTIVE_BOOTLOADER="systemd-boot"
+            fi
+        fi
+        if [ "$EFFECTIVE_BOOTLOADER" = "unknown" ] && has_grub_efi "$ESP"; then
+            EFFECTIVE_BOOTLOADER="grub"
+        fi
+        if [ "$EFFECTIVE_BOOTLOADER" = "unknown" ]; then
+            say "(!) на ESP $ESP нет работоспособного загрузчика — аварийно ставлю GRUB"
+            if install_grub_efi "$ESP" && has_grub_efi "$ESP"; then
+                EFFECTIVE_BOOTLOADER="grub"
+            fi
+        fi
+    else
+        say "(!) EFI-раздел (ESP) не найден среди /boot/efi, /efi, /boot"
+    fi
+else
+    ROOT_DISK=$(root_disk || true)
+    if [ -n "${ROOT_DISK:-}" ] && command -v grub-install >/dev/null 2>&1; then
+        # Для BIOS запись в MBR файлами не проверить — просто переустанавливаем.
+        say "BIOS: ставлю GRUB в MBR диска $ROOT_DISK"
+        if grub-install --target=i386-pc --recheck "$ROOT_DISK" >>"$LOG" 2>&1 &&
+           grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1; then
+            EFFECTIVE_BOOTLOADER="grub"
+        else
+            say "  (!) grub-install (BIOS) не отработал — смотрите $LOG"
+        fi
+    else
+        say "(!) BIOS: не удалось определить диск корня для GRUB"
+        [ -s /boot/grub/grub.cfg ] && EFFECTIVE_BOOTLOADER="grub"
+    fi
+fi
+say "Эффективный загрузчик: $EFFECTIVE_BOOTLOADER"
+
+# --- 5. Тема GRUB -----------------------------------------------------------
 make_grub_theme() {
     local themedir=/boot/grub/themes/flyarchos
     local bg=/usr/share/backgrounds/flyarchos/default.jpg
@@ -138,28 +304,11 @@ EOF
     grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1 || say "  (!) grub-mkconfig не отработал"
 }
 
-say "Тема GRUB"
-make_grub_theme || say "  тема GRUB не применена (не критично)"
-
-# --- 5. Контрольная проверка загрузчика ------------------------------------
-if [ ! -f /boot/grub/grub.cfg ] && [ ! -d /boot/loader/entries ] && [ ! -d /boot/EFI ]; then
-    say "(!) загрузчик не найден — ставим GRUB вручную"
-    if [ -d /sys/firmware/efi ]; then
-        for esp in /boot/efi /boot /efi; do
-            if [ -d "$esp" ]; then
-                run grub-install --target=x86_64-efi --efi-directory="$esp" \
-                                 --bootloader-id=FlyArchOs --recheck
-                break
-            fi
-        done
-        run grub-mkconfig -o /boot/grub/grub.cfg
-    else
-        rootdev=$(findmnt -no SOURCE / 2>/dev/null | sed 's/[0-9]*$//')
-        if [ -n "$rootdev" ]; then
-            run grub-install --target=i386-pc --recheck "$rootdev"
-            run grub-mkconfig -o /boot/grub/grub.cfg
-        fi
-    fi
+if [ "$EFFECTIVE_BOOTLOADER" != "systemd-boot" ]; then
+    say "Тема GRUB"
+    make_grub_theme || say "  тема GRUB не применена (не критично)"
+else
+    say "Тема GRUB пропущена: используется systemd-boot"
 fi
 
 # --- 6. Службы (повторно, на случай если prepare что-то пропустил) --------
@@ -195,10 +344,18 @@ fi
 
 # --- 8. Финальная уборка ---------------------------------------------------
 say "Уборка"
+# Установщик в установленной системе не нужен. profile_tool уже удалил
+# пакет (LIVE_ONLY_PACKAGES); здесь — страховочный повтор, а затем чистка
+# остатков конфигурации, которые pacman оставляет как .pacsave/оверлей.
+if command -v calamares >/dev/null 2>&1; then
+    say "Calamares всё ещё в целевой системе — удаляю пакет"
+    pacman -Rns --noconfirm --noprogressbar calamares >>"$LOG" 2>&1 ||
+        say "  (!) pacman не смог удалить calamares"
+fi
 if ! command -v calamares >/dev/null 2>&1; then
     rm -rf /etc/calamares /usr/share/calamares 2>/dev/null
-    rm -f /usr/share/applications/flyarchos-install.desktop 2>/dev/null
 fi
+rm -f /usr/share/applications/flyarchos-install.desktop 2>/dev/null
 rm -rf /var/cache/pacman/pkg/* /tmp/* /var/tmp/* 2>/dev/null
 rm -f /root/.bash_history
 
@@ -209,6 +366,7 @@ rm -f /root/.bash_history
     echo "  Окружение:     $DESKTOP"
     echo "  Сценарий:      $PRESET"
     echo "  Наборы ПО:     ${EXTRAS:-не выбраны}"
+    echo "  Загрузчик:     $EFFECTIVE_BOOTLOADER"
     echo "  Файрвол UFW:   $FIREWALL"
     echo "  Ядро:          $(uname -r)"
     echo
