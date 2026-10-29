@@ -75,7 +75,8 @@ OsNan/
 │   └── favicon.png
 │
 ├── docker/Dockerfile         сборка ISO в контейнере archlinux
-└── docs/                     BUILD.md, INSTALL.md, STRUCTURE.md, preview.png
+└── docs/                     BUILD.md, INSTALL.md, VIRTUALBOX.md,
+                              VIRTUALBOX-TEST.md, STRUCTURE.md, preview.png
 ```
 
 ## Кто за что отвечает
