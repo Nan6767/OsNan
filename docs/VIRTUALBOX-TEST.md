@@ -12,13 +12,16 @@ live-загрузка → Calamares → офлайн-установка → пе
 
 ## 1. Какой образ тестировать первым
 
-Используйте **mini №56** — это первый образ, в котором CI по-настоящему
-подтвердил установленный `calamares` и модуль `packagechooser`:
+Используйте **mini №58** — актуальную сборку из `main` после слияния
+исправлений установщика. В её CI-логе также подтверждены установленный
+`calamares`, модуль `packagechooser` и финальная проверка содержимого образа.
+Первым таким доказанным образом был №56; для нового E2E-теста он заменён №58:
 
-- ISO одним файлом: <https://github.com/Nan6767/OsNan/releases/download/iso-56-mini/flyarchos-1.7.0-beta-x86_64.iso>
-- Релиз: <https://github.com/Nan6767/OsNan/releases/tag/iso-56-mini>
+- ISO одним файлом: <https://github.com/Nan6767/OsNan/releases/download/iso-58-mini/flyarchos-1.7.0-beta-x86_64.iso>
+- Релиз: <https://github.com/Nan6767/OsNan/releases/tag/iso-58-mini>
 - Размер: `1 911 767 040` байт
-- SHA-256: `4a4b0f4a984edd3e465e0aeb7c7b3bed2f6328f6cc7665bfad110da61f75f61e`
+- SHA-256: `e1ed46fad5443bb1c6e5ce71943af2c568fe59e3432f82579b750b012797ae07`
+- Лог сборки: [../logs/iso-run-58.log](../logs/iso-run-58.log)
 
 Проверка контрольной суммы в PowerShell:
 
