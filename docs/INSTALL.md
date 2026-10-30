@@ -7,13 +7,13 @@
 
 ## 1. Загрузка с флешки
 
-1. Запишите ISO: `sudo dd if=flyarchos-2026XX.iso of=/dev/sdX bs=4M status=progress oflag=sync`
+1. Запишите ISO: `sudo dd if=flyarchos-1.7.0-beta-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
    (или Ventoy / balenaEtcher — поддерживается и UEFI, и BIOS).
 2. Загрузитесь с флешки. Live-сессия сама войдёт в **Hyprland** под
    пользователем `fly` (пароль `flyarchos`, у root тот же пароль).
-3. На экране входа SDDM можно выйти и выбрать другую сессию —
-   **Plasma (Wayland)**, **Plasma (X11)** или **Hyprland** — чтобы посмотреть
-   оба окружения до установки.
+3. На экране входа SDDM можно завершить сеанс и выбрать другую сессию —
+   **Plasma (Wayland)** или **Hyprland**, — чтобы посмотреть оба окружения
+   до установки. Отдельной X11-сессии Plasma в FlyArchOs нет.
 
 > Хотите консоль? `Ctrl+Alt+F2…F6` — обычные tty, вход `fly` / `flyarchos`.
 
@@ -73,7 +73,7 @@ umount
 
 1. Перезагрузитесь, войдите в SDDM.
    Если выбраны оба окружения — перед входом внизу/вверху есть список сессий:
-   **Plasma (Wayland)**, **Plasma (X11)**, **Hyprland**.
+   **Plasma (Wayland)** и **Hyprland**.
    По умолчанию подставляется то, что вы указали в установщике
    (`/var/lib/sddm/state.conf`).
 2. Откроется **помощник первого запуска** (`flyarchos-welcome`): обои, наборы
@@ -83,7 +83,7 @@ umount
 
 ```bash
 flyarchos-welcome                # помощник первого запуска
-flyarchos-wallpaper list         # 12 обоев
+flyarchos-wallpaper list         # 14 обоев
 flyarchos-wallpaper set 05-nord-fjord
 flyarchos-wallpaper random
 flyarchos-wallpaper-gen --list   # сгенерировать свои обои (8 тем + свой seed)
@@ -98,9 +98,9 @@ flyarchos-profile --apply --desktop=both --extras=dev,media   # изменить
 ### Обновление системы
 
 ```bash
-sudo pacman -Syu           # обычное обновление
-paru  /  yay               # AUR (пары стоят, если собирали репозиторий)
-flatpak update             # Flatpak-приложения
+flyarchos-update           # pacman + Flatpak одной командой
+flyarchos-aur install      # первый раз: поставить yay для AUR
+flyarchos-aur update       # дальше: обновить систему и AUR
 ```
 
 ## 5. Горячие клавиши Hyprland
@@ -135,8 +135,9 @@ flatpak update             # Flatpak-приложения
   ```
 * **Хочу вернуть удалённые пакеты.** `flyarchos-profile --apply --desktop=both
   --extras=dev,gaming,media,office --install-missing` (нужна сеть).
-* **Чёрный экран в Hyprland на NVIDIA.** На экране входа выберите
-  **Plasma (X11)** или добавьте `nvidia_drm.modeset=1` в
-  `GRUB_CMDLINE_LINUX_DEFAULT` (`/etc/default/grub` → `grub-mkconfig`).
+* **Чёрный экран в Hyprland на NVIDIA.** Для диагностики попробуйте вторую
+  Wayland-сессию Plasma и проверьте, что в `GRUB_CMDLINE_LINUX_DEFAULT`
+  (`/etc/default/grub`) есть `nvidia_drm.modeset=1`; после изменения выполните
+  `grub-mkconfig`.
 * **Нет сети.** `nmcli device wifi list` / `nmtui` — NetworkManager включён.
 * **Где логи установки:** `/var/log/flyarchos-install.log`.

@@ -8,16 +8,17 @@ OsNan/
 │
 ├── groups/                   ★ список пакетов — источник правды
 │   ├── 00-core.txt           118  ядро, сеть, диски, звук, консоль
-│   ├── 10-common.txt          42  шрифты, темы, Wayland-утилиты
-│   ├── 20-hyprland.txt        14  Hyprland + Waybar/Wofi/Mako/Kitty
-│   ├── 30-plasma.txt          38  KDE Plasma + SDDM + KDE-приложения
+│   ├── 10-common.txt          43  шрифты, темы, Wayland-утилиты
+│   ├── 20-hyprland.txt        15  Hyprland + Waybar/Wofi/Mako/Kitty
+│   ├── 30-plasma.txt          47  KDE Plasma + SDDM + KDE-приложения
 │   ├── 40-apps.txt            10  Firefox, Chromium, Telegram, Discord
 │   ├── 50-dev.txt             32  компиляторы, Docker, ВМ, VS Code
-│   ├── 60-gaming.txt          24  Steam, Wine, драйверы (вкл. 32-бит)
+│   ├── 60-gaming.txt          27  Steam, Wine, драйверы (вкл. 32-бит)
 │   ├── 70-media.txt           12  GIMP, Krita, Kdenlive, OBS, Blender
 │   ├── 80-office.txt           7  LibreOffice, Thunderbird
-│   ├── 99-live.txt             4  Calamares и прочее только для ISO
-│   ├── aur.txt                AUR (в образ только при собранном репозитории)
+│   ├── 85-privacy.txt          8  приватность и безопасность
+│   ├── 99-live.txt             8  Calamares и прочее только для ISO
+│   ├── aur.txt                25  AUR-пакеты локального репозитория
 │   └── README.md              как устроены группы и как их менять
 │
 ├── profile/                  archiso-профиль (mkarchiso)
@@ -44,7 +45,7 @@ OsNan/
 │       ├── usr/
 │       │   ├── lib/flyarchos/           ★ инструменты дистрибутива
 │       │   │   ├── profile_tool.py      выбор окружения/наборов (удаление групп)
-│       │   │   ├── wallpaper_tool.py    обои: Hyprland (swww) и Plasma
+│       │   │   ├── wallpaper_tool.py    обои: Hyprland (awww) и Plasma
 │       │   │   ├── wallpapers.py        генератор процедурных обоев
 │       │   │   ├── welcome-gui.py       помощник первого запуска (PyQt6/CLI)
 │       │   │   ├── install-prepare.sh   шаг установки: чистка live-мусора
@@ -53,7 +54,7 @@ OsNan/
 │       │   │   └── flyarchos-install    запуск Calamares
 │       │   ├── bin/flyarchos-*          симлинки на инструменты
 │       │   └── share/
-│       │       ├── backgrounds/flyarchos/   12 обоев + превью + default.jpg
+│       │       ├── backgrounds/flyarchos/   14 обоев + превью + default.jpg
 │       │       ├── wallpapers/FlyArchOs-*/  KPackage-пакеты обоев для Plasma
 │       │       ├── flyarchos/               logo.txt, манифест обоев, шаблоны,
 │       │       │                            mkinitcpio-пресеты, groups/
@@ -67,7 +68,7 @@ OsNan/
 │   ├── pack-wallpapers.py    AI-исходники + процедурные генерации → обои в ISO
 │   ├── make-branding.py      логотип → графика установщика и иконки
 │   ├── check.py              проверка дерева перед сборкой
-│   └── tests/                22 модульных теста (логика выбора групп)
+│   └── tests/                71 модульный тест (профили, установщик, инструменты)
 │
 ├── assets/                   исходники графики
 │   ├── wallpapers-src/       6 AI-картинок
@@ -113,8 +114,9 @@ flyarchos-profile --apply --desktop=${gs[packagechooser_desktop]}
 
 ### Calamares
 
-* `settings.conf` задаёт три экземпляра `packagechooser` (окружение, наборы ПО,
-  загрузчик) и три `shellprocess` (prepare, profile, finalize);
+* `settings.conf` задаёт четыре экземпляра `packagechooser` (окружение,
+  сценарий, наборы ПО и загрузчик) и три `shellprocess` (prepare, profile,
+  finalize); в компактных профилях лишние страницы выбора скрываются;
 * установка идёт через `unpackfs` (распаковка `airootfs.sfs`), поэтому сеть не
   нужна;
 * `initcpiocfg` + `initcpio` отвечают за mkinitcpio (в т.ч. LUKS),
@@ -127,7 +129,7 @@ flyarchos-profile --apply --desktop=${gs[packagechooser_desktop]}
 `scripts/pack-wallpapers.py`:
 
 * масштабирует 6 AI-картинок до 1920×1080;
-* генерирует 6 процедурных обоев в 2560×1440 тем же `wallpapers.py`, что
+* генерирует 8 процедурных обоев в 2560×1440 тем же `wallpapers.py`, что
   установлен в системе (один алгоритм — везде);
 * делает превью, `default.jpg`, фон для GRUB, манифест
   `/usr/share/flyarchos/wallpapers.json`;
