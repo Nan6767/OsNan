@@ -70,8 +70,10 @@ Mini №56 был первым образом, для которого CI док
 #### Full №57
 
 - Страница релиза: <https://github.com/Nan6767/OsNan/releases/tag/iso-57-full>
-- Один ZIP из артефакта сборки:
-  <https://nightly.link/Nan6767/OsNan/suites/110574858273/artifacts/12864344250>
+- Один ZIP из артефакта сборки (прямая загрузка `.zip`):
+  <https://nightly.link/Nan6767/OsNan/actions/runs/40792766889/flyarchos-full-iso-57.zip>
+- Запасная ссылка на тот же артефакт:
+  <https://nightly.link/Nan6767/OsNan/actions/artifacts/12864344250.zip>
 - SHA-256 готового ISO:
 
 ```text
