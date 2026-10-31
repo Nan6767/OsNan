@@ -205,6 +205,14 @@ sfs_has /usr/bin/awww || fail_iso "нет /usr/bin/awww (обои Hyprland)"
 # пропускает packagechooser — build-aur.sh снимает пропуск, здесь контроль)
 sfs_has /usr/bin/calamares || fail_iso "нет /usr/bin/calamares (установщик)"
 sfs_has /usr/lib/calamares/modules/packagechooser || fail_iso "нет модуля packagechooser (страницы выбора в установщике)"
+# QML должен лежать в пакетном каталоге данных, а launcher обязан запускать
+# calamares без тестового флага -c: иначе Calamares ищет /etc/calamares/qml
+# и завершается до открытия окна (регрессия, пойманная на Mini №58).
+sfs_has /usr/share/calamares/qml/calamares/slideshow/Presentation.qml || fail_iso "нет Calamares QML в /usr/share/calamares/qml"
+if sfs_grep /usr/lib/flyarchos/flyarchos-install 'exec calamares -c'; then
+    fail_iso "flyarchos-install запускает calamares -c и ломает поиск QML"
+fi
+sfs_grep /usr/lib/flyarchos/flyarchos-install '^    exec calamares$' || fail_iso "flyarchos-install не запускает calamares без -c"
 
 # Hyprland 0.57+ читает только Lua-конфиг. Legacy hyprland.conf в домашнем
 # каталоге означает молча потерянные автозапуск, панель, обои и бинды.

@@ -30,8 +30,12 @@ fi
 
 if command -v calamares >/dev/null 2>&1 && [ -f "$CALAMARES_CFG/settings.conf" ]; then
     echo "Запускаем Calamares (брендинг: $BRANDING)…"
-    # -c указывает каталог с settings.conf и modules/
-    exec calamares -c "$CALAMARES_CFG"
+    # ВАЖНО: запускать без -c. У Calamares этот флаг означает тестовый
+    # каталог данных приложения: с ним он ищет QML только в
+    # /etc/calamares/qml и падает ещё до открытия окна. Без -c он сам
+    # находит /etc/calamares/settings.conf, брендинг и конфиги модулей,
+    # а QML берёт из установленного пакета (/usr/share/calamares/qml).
+    exec calamares
 fi
 
 if command -v archinstall >/dev/null 2>&1; then

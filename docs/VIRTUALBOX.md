@@ -827,6 +827,19 @@ ls /usr/lib/calamares/modules/packagechooser/
 flyarchos-install
 ```
 
+Если на Full №57/Mini №58 появляется
+`explicitly configured application data directory is missing qml/`, это
+известный баг `flyarchos-install`: он запускает Calamares с тестовым флагом
+`-c /etc/calamares`, из-за чего пакетный `/usr/share/calamares/qml` не
+рассматривается. Запустите установщик напрямую без `-c`:
+
+```bash
+sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM calamares
+```
+
+В следующих сборках launcher исправлен и снова достаточно
+`flyarchos-install`.
+
 Лог запуска Calamares:
 
 ```bash

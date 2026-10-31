@@ -253,7 +253,7 @@ flyarchos-install
 | Hyprland возвращает экран входа | Оставить VMSVGA и 128 МБ, **включить** 3D-ускорение и повторить |
 | Медленная мышь и окна в ВМ | Уменьшить разрешение, оставить масштаб 100%; в новых сборках проверить `flyarchos-performance status`, в Hyprland — `Super+F1` |
 | Нет интернета | Адаптер NAT включён, Cable Connected отмечен |
-| Не открывается установщик | Использовать Mini №58/Full №57 и команду `flyarchos-install` |
+| Calamares: `missing qml/` на №57/№58 | В live-терминале запустить напрямую: `sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM calamares` |
 
 📖 Подробно — сеть и SSH, Guest Additions, общие папки, USB, разрешение экрана
 и вся диагностика — в полном руководстве:

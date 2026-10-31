@@ -511,6 +511,15 @@ class AuditRegressionTest(unittest.TestCase):
         ci = (REPO / "scripts" / "ci-build.sh").read_text(encoding="utf-8")
         self.assertIn("/usr/bin/calamares", ci)
         self.assertIn("modules/packagechooser", ci)
+        self.assertIn("/usr/share/calamares/qml/calamares/slideshow/Presentation.qml", ci)
+
+        # `calamares -c /etc/calamares` включает тестовый override каталога
+        # данных и требует /etc/calamares/qml. Обычный запуск сам находит
+        # sysconf-конфиги и пакетный QML — регрессия со скриншота Mini №58.
+        launcher = (self.AI / "usr" / "lib" / "flyarchos"
+                    / "flyarchos-install").read_text(encoding="utf-8")
+        self.assertRegex(launcher, r"(?m)^\s*exec calamares\s*$")
+        self.assertNotRegex(launcher, r"(?m)^\s*exec calamares\s+-c\b")
         # и вообще каждый модуль последовательности + GS-инвариант
         self.assertIn("module.desc", ci)
         self.assertIn("shown_choosers", ci)

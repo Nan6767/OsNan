@@ -84,6 +84,18 @@ Get-FileHash .\flyarchos-1.7.0-beta-x86_64.iso -Algorithm SHA256
 flyarchos-install
 ```
 
+> **Известный баг именно №58:** `flyarchos-install` завершается ошибкой
+> `explicitly configured application data directory is missing qml/`.
+> QML в образе есть — launcher ошибочно запускает Calamares с тестовым
+> флагом `-c`. Для этого прогона запустите установщик напрямую:
+>
+> ```bash
+> sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM calamares
+> ```
+>
+> Это дефект запуска на №58, а не успешный/неуспешный результат самой
+> установки; отметьте его отдельно и продолжите чек-лист, если окно открылось.
+
 Calamares должен открыться без запроса пароля: в live-сессии у пользователя
 `fly` настроен sudo без пароля.
 
