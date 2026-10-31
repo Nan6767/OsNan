@@ -23,6 +23,7 @@ if [ "${1:-}" = "--keys" ]; then
   SUPER+L            блокировка экрана
   SUPER+Q            закрыть окно        SUPER+Shift+Q  выход из Hyprland
   SUPER+F            полный экран        SUPER+V        плавающее окно
+  SUPER+F1           режим производительности (эффекты вкл/выкл)
   SUPER+1..9         рабочие столы       SUPER+стрелки  фокус между окнами
   SUPER+колесо мыши  листать рабочие столы
   Alt+Shift          раскладка RU/US
@@ -68,6 +69,7 @@ cat <<'EOF'
   flyarchos-install          запустить установщик (Calamares)
   flyarchos-update           обновить систему (pacman + flatpak, снимок btrfs)
   flyarchos-doctor           диагностика: службы, диск, пакеты, сеть, звук
+  flyarchos-performance      лёгкая графика для ВМ: status / auto / on / off
   flyarchos-theme list       пресеты оформления (обои + акцент + рамки)
   flyarchos-snapshot         снимки системы на btrfs (snapper)
   flyarchos-backup           инкрементная копия домашнего каталога

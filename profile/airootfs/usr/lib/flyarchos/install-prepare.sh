@@ -108,7 +108,7 @@ for unit in NetworkManager.service sddm.service bluetooth.service \
             systemd-timesyncd.service systemd-oomd.service; do
     run systemctl enable "$unit"
 done
-for unit in cups.service avahi-daemon.service \
+for unit in cups.service avahi-daemon.service vboxservice.service \
             systemd-zram-setup@zram0.service; do
     systemctl enable "$unit" >>"$LOG" 2>&1 || say "  служба недоступна: $unit"
 done

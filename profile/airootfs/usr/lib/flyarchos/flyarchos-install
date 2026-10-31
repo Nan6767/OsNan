@@ -30,8 +30,29 @@ fi
 
 if command -v calamares >/dev/null 2>&1 && [ -f "$CALAMARES_CFG/settings.conf" ]; then
     echo "Запускаем Calamares (брендинг: $BRANDING)…"
-    # -c указывает каталог с settings.conf и modules/
-    exec calamares -c "$CALAMARES_CFG"
+    # ВАЖНО: запускать без -c. У Calamares этот флаг означает тестовый
+    # каталог данных приложения: с ним он ищет QML только в
+    # /etc/calamares/qml и падает ещё до открытия окна. Без -c он сам
+    # находит /etc/calamares/settings.conf, брендинг и конфиги модулей,
+    # а QML берёт из установленного пакета (/usr/share/calamares/qml).
+    #
+    # sudo не сохраняет XDG_SESSION_TYPE, поэтому root-Qt без явного
+    # указания выбирает xcb/XWayland и падает на недоступном display :1.
+    # Если пользовательская сессия Wayland, Calamares запускаем native.
+    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        export QT_QPA_PLATFORM=wayland
+    fi
+    #
+    # В VirtualBox/VMware (vmwgfx) Hyprland/Aquamarine может отклонять
+    # GPU DMA-BUF Qt-клиентов: Calamares падает ещё до окна с
+    # "invalid arguments for wl_surface#.attach". Программный Mesa/llvmpipe
+    # рисует через wl_shm и обходит этот путь; самому композитору и
+    # установленной системе переменная не достаётся.
+    if command -v systemd-detect-virt >/dev/null 2>&1 \
+        && systemd-detect-virt --vm >/dev/null 2>&1; then
+        export LIBGL_ALWAYS_SOFTWARE=1
+    fi
+    exec calamares
 fi
 
 if command -v archinstall >/dev/null 2>&1; then

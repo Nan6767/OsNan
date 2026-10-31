@@ -70,8 +70,10 @@ Mini №56 был первым образом, для которого CI док
 #### Full №57
 
 - Страница релиза: <https://github.com/Nan6767/OsNan/releases/tag/iso-57-full>
-- Один ZIP из артефакта сборки:
-  <https://nightly.link/Nan6767/OsNan/suites/110574858273/artifacts/12864344250>
+- Один ZIP из артефакта сборки (прямая загрузка `.zip`):
+  <https://nightly.link/Nan6767/OsNan/actions/runs/40792766889/flyarchos-full-iso-57.zip>
+- Запасная ссылка на тот же артефакт:
+  <https://nightly.link/Nan6767/OsNan/actions/artifacts/12864344250.zip>
 - SHA-256 готового ISO:
 
 ```text
@@ -205,9 +207,11 @@ Plasma будут работать заметно тяжелее. Не выде�
 - **Monitor Count:** `1`;
 - **Enable 3D Acceleration:** включить для первого запуска.
 
-Если после загрузки чёрный экран, искажённая картинка или Hyprland/Plasma
-падают, полностью выключите ВМ и отключите 3D-ускорение. Остальные параметры
-при этом не меняйте.
+Если Hyprland после ввода пароля сразу возвращает экран SDDM, 3D-ускорение,
+наоборот, должно быть **включено**: без рабочего OpenGL сессия Hyprland в
+VirtualBox не стартует. Отключение 3D — только отдельный эксперимент при
+артефактах или чёрном экране в Plasma; после него для входа выбирайте Plasma,
+а не Hyprland. Остальные параметры при такой проверке не меняйте.
 
 ### 4.3. Накопители и подключённый ISO
 
@@ -545,15 +549,18 @@ IP смотрите в госте командой `ip -brief address`.
 Guest Additions добавляют удобную интеграцию: общие папки, общий буфер
 обмена, drag-and-drop, синхронизацию времени и лучшую работу с размером окна.
 
-> Устанавливайте Guest Additions **только в уже установленную систему**, а не
-> в live-сессию. Изменения в live-сессии исчезнут после перезагрузки.
+> В сборках после Mini №58/Full №57 пакет `virtualbox-guest-utils` уже входит
+> в FlyArchOs, а `vboxservice.service` включён. На №57/№58 выполните установку
+> ниже в уже установленной системе; в live-сессии изменения исчезнут после
+> перезагрузки.
 
 Для FlyArchOs, как и для Arch Linux, предпочтительнее пакет из репозиториев
 Arch, а не ручная установка с ISO Oracle. Не смешивайте оба способа: если
 поставлен пакет Arch ниже, не запускайте дополнительно установщик через
 **Devices → Insert Guest Additions CD Image**.
 
-В установленной FlyArchOs выполните:
+В установленной FlyArchOs выполните (команда с `--needed` безопасна и там, где
+пакет уже есть):
 
 ```bash
 sudo pacman -Syu --needed virtualbox-guest-utils
@@ -575,24 +582,33 @@ id
 
 ### Если общий буфер обмена не заработал в Hyprland
 
-Пакет ставит XDG-автозапуск `VBoxClient-all`. Plasma обычно запускает его сама.
-Если в Hyprland клиент не запущен, проверьте:
+Пакет ставит XDG-автозапуск `VBoxClient-all`. В Plasma VirtualBox сам
+распознаёт Wayland-сессию, но в Hyprland автодетект при наличии `DISPLAY` от
+XWayland может выбрать X11-backend: процесс вроде бы запущен, а буфер
+native-приложений (например, kitty) с хостом не синхронизируется. Поэтому в
+сборках FlyArchOs после №58 Hyprland запускает буфер явно через Wayland.
+
+Проверьте, что в VirtualBox включён **Bidirectional** (раздел 12.2), а затем
+посмотрите клиент:
 
 ```bash
 pgrep -a VBoxClient
 ```
 
-Для разового запуска:
+Для разового перезапуска именно буфера обмена:
 
 ```bash
-VBoxClient-all
+pkill -x VBoxClient
+VBoxClient --clipboard --session-type wayland
+pgrep -a VBoxClient
 ```
 
-Для постоянного запуска добавьте внутри существующего обработчика
-`hyprland.start` в `~/.config/hypr/hyprland.lua` строку:
+Для постоянного запуска в старых сборках №57/№58 добавьте внутри
+существующего обработчика `hyprland.start` в
+`~/.config/hypr/hyprland.lua` строку:
 
 ```lua
-hl.exec_cmd("VBoxClient-all")
+hl.exec_cmd("VBoxClient --clipboard --session-type wayland")
 ```
 
 Поддержка буфера обмена в Wayland зависит от версий VirtualBox, хоста и
@@ -751,10 +767,51 @@ ISO всё ещё подключён и стоит раньше жёсткого
 
 1. Подождите 1–2 минуты при первом запуске.
 2. Полностью выключите ВМ.
-3. В **Display** оставьте VMSVGA и 128 МБ, но отключите **3D Acceleration**.
-4. Запустите снова.
-5. Если не помогло, обновите VirtualBox на хосте и попробуйте выбрать Plasma
-   на экране входа SDDM.
+3. В **Display** проверьте VMSVGA, 128 МБ и **включённое 3D Acceleration** —
+   это обязательный режим для Hyprland.
+4. Запустите снова и попробуйте Hyprland.
+5. Если именно с 3D видны артефакты или чёрный экран, отдельным экспериментом
+   отключите 3D и на экране SDDM выберите **Plasma**. Hyprland без 3D может
+   сразу возвращаться на экран входа — это ожидаемо.
+6. Обновите VirtualBox на хосте, если оба варианта дают чёрный экран.
+
+### Медленно: мышь, окна и анимации отстают
+
+Виртуальная VMSVGA заметно медленнее обычной видеокарты, поэтому сначала
+уменьшайте работу композитора, а не переустанавливайте систему:
+
+1. Оставьте один виртуальный монитор, VMSVGA, 128 МБ видеопамяти и включённое
+   3D. Для ВМ выделите 4 CPU и лучше 12 ГБ RAM, если хост позволяет.
+2. Уменьшите окно/разрешение гостя до 1600×900 или 1280×720 и используйте
+   масштаб 100%. Полный экран на 4K для VMSVGA может быть тяжёлым даже на
+   быстром хосте.
+3. В сборках после №58 облегчённый режим в ВМ включается автоматически.
+   Проверка и ручное управление:
+
+   ```bash
+   flyarchos-performance status
+   flyarchos-performance auto   # автоматически в ВМ
+   flyarchos-performance on     # всегда лёгкая графика
+   flyarchos-performance off    # полные эффекты
+   ```
+
+   В Hyprland его также переключает `Super+F1`. Режим отключает blur, тени и
+   анимации в Hyprland, а в Plasma — blur/Magic Lamp и ставит мгновенные
+   анимации. Если уже запущенная Plasma не применила эффект сразу, завершите
+   сеанс и войдите снова.
+4. На уже выпущенных №57/№58 автоматики ещё нет. В текущей сессии Hyprland
+   эффекты можно временно выключить командой из терминала:
+
+   ```bash
+   hyprctl eval 'hl.config({animations={enabled=false},decoration={rounding=0,inactive_opacity=1,blur={enabled=false},shadow={enabled=false}},render={new_render_scheduling=true},misc={render_unfocused_fps=5}})'
+   ```
+
+   Вернуть конфиг: `hyprctl reload`. В Plasma на этих сборках поставьте
+   **System Settings → Workspace Behavior → Animation speed → Instant** и
+   отключите **Desktop Effects → Blur** и **Magic Lamp**.
+5. Если медленно только первые 1–2 минуты, дождитесь окончания автозапуска:
+   live-система одновременно поднимает панель, сеть, уведомления и помощника
+   первого запуска.
 
 ### VirtualBox сообщает, что VT-x/AMD-V недоступна
 
@@ -776,6 +833,24 @@ pacman -Q calamares
 ls /usr/lib/calamares/modules/packagechooser/
 flyarchos-install
 ```
+
+Если на Full №57/Mini №58 появляется
+`explicitly configured application data directory is missing qml/`, это
+известный баг `flyarchos-install`: он запускает Calamares с тестовым флагом
+`-c /etc/calamares`, из-за чего пакетный `/usr/share/calamares/qml` не
+рассматривается. Запустите установщик напрямую без `-c`, явно выбрав
+native Wayland и программный GL для ВМ:
+
+```bash
+sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR env QT_QPA_PLATFORM=wayland LIBGL_ALWAYS_SOFTWARE=1 calamares
+```
+
+`QT_QPA_PLATFORM=wayland` здесь обязательна: sudo не сохраняет
+`XDG_SESSION_TYPE`, и без явного указания root-Qt на этих сборках выбирает
+`xcb`, после чего падает с `could not connect to display :1`.
+
+В следующих сборках launcher исправлен и снова достаточно
+`flyarchos-install`.
 
 Лог запуска Calamares:
 

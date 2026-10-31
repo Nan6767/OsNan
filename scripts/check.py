@@ -438,6 +438,7 @@ def check_installer_scripts(report: Report) -> None:
         "flyarchos-clean",
         "flyarchos-aur",
         "flyarchos-exe",
+        "flyarchos-performance",
     ]
     missing = []
     non_exec = []

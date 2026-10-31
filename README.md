@@ -63,10 +63,13 @@
 | [Full №57](https://github.com/Nan6767/OsNan/releases/tag/iso-57-full) | ZIP с ISO или части `.part00`–`.part05` | Нужны сразу дополнительные наборы программ, пресеты установщика и второе ядро |
 
 Full №57 можно скачать
-[одним ZIP-файлом](https://nightly.link/Nan6767/OsNan/suites/110574858273/artifacts/12864344250):
+[одним ZIP-файлом](https://nightly.link/Nan6767/OsNan/actions/runs/40792766889/flyarchos-full-iso-57.zip):
 архив нужно распаковать, а в VirtualBox подключать уже файл `.iso`.
-Если ZIP недоступен, на странице Full-релиза лежат постоянные части `.part00`–
-`.part05` и инструкция по склейке.
+Если браузер вместо загрузки покажет ошибку nightly.link, используйте
+[запасную ссылку на тот же артефакт](https://nightly.link/Nan6767/OsNan/actions/artifacts/12864344250.zip).
+Старая ссылка вида `/suites/.../artifacts/...` не работает (HTTP 500) и больше
+не должна использоваться. Если ZIP недоступен, на странице Full-релиза лежат
+постоянные части `.part00`–`.part05` и инструкция по склейке.
 
 > [!WARNING]
 > На странице Releases осталась долгая история разработки. Для новой загрузки
@@ -247,9 +250,10 @@ flyarchos-install
 |---|---|
 | `No bootable medium found` | ISO подключён к оптическому приводу, Optical стоит первым, Secure Boot выключен |
 | Снова загружается live-система | ISO после установки не извлекли |
-| Чёрный экран | Оставить VMSVGA и 128 МБ, выключить 3D-ускорение и повторить |
+| Hyprland возвращает экран входа | Оставить VMSVGA и 128 МБ, **включить** 3D-ускорение и повторить |
+| Медленная мышь и окна в ВМ | Уменьшить разрешение, оставить масштаб 100%; в новых сборках проверить `flyarchos-performance status`, в Hyprland — `Super+F1` |
 | Нет интернета | Адаптер NAT включён, Cable Connected отмечен |
-| Не открывается установщик | Использовать Mini №58/Full №57 и команду `flyarchos-install` |
+| Calamares: `missing qml/` или xcb/display `:1` на №57/№58 | В live-терминале запустить напрямую: `sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR env QT_QPA_PLATFORM=wayland LIBGL_ALWAYS_SOFTWARE=1 calamares` |
 
 📖 Подробно — сеть и SSH, Guest Additions, общие папки, USB, разрешение экрана
 и вся диагностика — в полном руководстве:

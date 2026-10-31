@@ -175,7 +175,7 @@ sfs_has /home/fly || fail_iso "нет домашнего каталога /home/
 for tool in profile_tool.py wallpaper_tool.py wallpapers.py welcome-gui.py \
             doctor_tool.py theme_tool.py backup_tool.py \
             flyarchos-info flyarchos-install flyarchos-update flyarchos-snapshot \
-            flyarchos-clean flyarchos-aur flyarchos-exe \
+            flyarchos-clean flyarchos-aur flyarchos-exe flyarchos-performance \
             install-prepare.sh install-finalize.sh live-setup.sh; do
     line="$(unsquashfs -ll "$SFS" "/usr/lib/flyarchos/$tool" 2>/dev/null | grep -a "$tool" | head -1)"
     case "$line" in
@@ -205,6 +205,16 @@ sfs_has /usr/bin/awww || fail_iso "нет /usr/bin/awww (обои Hyprland)"
 # пропускает packagechooser — build-aur.sh снимает пропуск, здесь контроль)
 sfs_has /usr/bin/calamares || fail_iso "нет /usr/bin/calamares (установщик)"
 sfs_has /usr/lib/calamares/modules/packagechooser || fail_iso "нет модуля packagechooser (страницы выбора в установщике)"
+# QML должен лежать в пакетном каталоге данных, а launcher обязан запускать
+# calamares без тестового флага -c: иначе Calamares ищет /etc/calamares/qml
+# и завершается до открытия окна (регрессия, пойманная на Mini №58).
+sfs_has /usr/share/calamares/qml/calamares/slideshow/Presentation.qml || fail_iso "нет Calamares QML в /usr/share/calamares/qml"
+if sfs_grep /usr/lib/flyarchos/flyarchos-install 'exec calamares -c'; then
+    fail_iso "flyarchos-install запускает calamares -c и ломает поиск QML"
+fi
+sfs_grep /usr/lib/flyarchos/flyarchos-install '^    exec calamares$' || fail_iso "flyarchos-install не запускает calamares без -c"
+sfs_grep /usr/lib/flyarchos/flyarchos-install 'export LIBGL_ALWAYS_SOFTWARE=1' || fail_iso "flyarchos-install без software-GL обхода vmwgfx для ВМ"
+sfs_grep /usr/lib/flyarchos/flyarchos-install 'export QT_QPA_PLATFORM=wayland' || fail_iso "flyarchos-install не форсит native Wayland для root-Qt"
 
 # Hyprland 0.57+ читает только Lua-конфиг. Legacy hyprland.conf в домашнем
 # каталоге означает молча потерянные автозапуск, панель, обои и бинды.
@@ -214,6 +224,10 @@ if sfs_has /etc/skel/.config/hypr/hyprland.conf; then
     fail_iso "в образе остался legacy hyprland.conf вместо hyprland.lua"
 fi
 sfs_grep /etc/skel/.config/hypr/hyprland.lua 'hl.on("hyprland.start"' || fail_iso "hyprland.lua без автозапуска FlyArchOs"
+sfs_grep /etc/skel/.config/hypr/hyprland.lua 'detect_performance_mode' || fail_iso "hyprland.lua без авторежима производительности для ВМ"
+sfs_grep /etc/skel/.config/hypr/hyprland.lua 'new_render_scheduling = performance_mode' || fail_iso "hyprland.lua без облегчённого рендера для ВМ"
+sfs_has /usr/lib/flyarchos/flyarchos-performance || fail_iso "нет flyarchos-performance"
+sfs_has /etc/xdg/autostart/flyarchos-performance.desktop || fail_iso "нет автозапуска облегчённой Plasma для ВМ"
 if sfs_grep /etc/skel/.config/hypr/hyprland.lua 'exec_cmd.*pamixer'; then
     fail_iso "hyprland.lua ссылается на pamixer, которого нет в группах пакетов"
 fi
@@ -223,6 +237,13 @@ fi
 sfs_has /usr/bin/sddm || fail_iso "нет /usr/bin/sddm"
 sfs_has /usr/share/wayland-sessions/hyprland.desktop || fail_iso "нет сессии hyprland.desktop"
 sfs_has /usr/share/wayland-sessions/plasma.desktop || fail_iso "нет сессии plasma.desktop"
+
+# VirtualBox-гость должен получать интеграцию без отдельной установки пакета.
+sfs_has /usr/bin/VBoxService || fail_iso "нет VBoxService (virtualbox-guest-utils)"
+sfs_has /usr/bin/VBoxClient || fail_iso "нет VBoxClient (virtualbox-guest-utils)"
+sfs_has /etc/systemd/system/multi-user.target.wants/vboxservice.service || fail_iso "vboxservice.service не включён"
+sfs_grep /etc/group '^vboxsf:.*fly' || fail_iso "live fly не входит в vboxsf"
+sfs_grep /etc/skel/.config/hypr/hyprland.lua 'VBoxClient --clipboard --session-type wayland' || fail_iso "Hyprland не форсит Wayland-backend общего буфера VirtualBox"
 
 # Конфиг pacman УСТАНОВЛЕННОЙ системы: multilib включён, а сборочных
 # file://-репозиториев и mini-NoExtract в нём быть не должно.
