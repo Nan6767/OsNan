@@ -36,6 +36,13 @@ if command -v calamares >/dev/null 2>&1 && [ -f "$CALAMARES_CFG/settings.conf" ]
     # находит /etc/calamares/settings.conf, брендинг и конфиги модулей,
     # а QML берёт из установленного пакета (/usr/share/calamares/qml).
     #
+    # sudo не сохраняет XDG_SESSION_TYPE, поэтому root-Qt без явного
+    # указания выбирает xcb/XWayland и падает на недоступном display :1.
+    # Если пользовательская сессия Wayland, Calamares запускаем native.
+    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        export QT_QPA_PLATFORM=wayland
+    fi
+    #
     # В VirtualBox/VMware (vmwgfx) Hyprland/Aquamarine может отклонять
     # GPU DMA-BUF Qt-клиентов: Calamares падает ещё до окна с
     # "invalid arguments for wl_surface#.attach". Программный Mesa/llvmpipe

@@ -831,11 +831,16 @@ flyarchos-install
 `explicitly configured application data directory is missing qml/`, это
 известный баг `flyarchos-install`: он запускает Calamares с тестовым флагом
 `-c /etc/calamares`, из-за чего пакетный `/usr/share/calamares/qml` не
-рассматривается. Запустите установщик напрямую без `-c`:
+рассматривается. Запустите установщик напрямую без `-c`, явно выбрав
+native Wayland и программный GL для ВМ:
 
 ```bash
-sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM env LIBGL_ALWAYS_SOFTWARE=1 calamares
+sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR env QT_QPA_PLATFORM=wayland LIBGL_ALWAYS_SOFTWARE=1 calamares
 ```
+
+`QT_QPA_PLATFORM=wayland` здесь обязательна: sudo не сохраняет
+`XDG_SESSION_TYPE`, и без явного указания root-Qt на этих сборках выбирает
+`xcb`, после чего падает с `could not connect to display :1`.
 
 В следующих сборках launcher исправлен и снова достаточно
 `flyarchos-install`.

@@ -90,8 +90,11 @@ flyarchos-install
 > флагом `-c`. Для этого прогона запустите установщик напрямую:
 >
 > ```bash
-> sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM env LIBGL_ALWAYS_SOFTWARE=1 calamares
+> sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR env QT_QPA_PLATFORM=wayland LIBGL_ALWAYS_SOFTWARE=1 calamares
 > ```
+>
+> Явный `QT_QPA_PLATFORM=wayland` нужен, иначе root-Qt после sudo выбирает
+> `xcb` и падает на недоступном XWayland `display :1`.
 >
 > Это дефект запуска на №58, а не успешный/неуспешный результат самой
 > установки; отметьте его отдельно и продолжите чек-лист, если окно открылось.

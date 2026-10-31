@@ -524,6 +524,10 @@ class AuditRegressionTest(unittest.TestCase):
         # wl_surface.attach; установщик в ВМ должен рисоваться llvmpipe/wl_shm.
         self.assertIn("systemd-detect-virt --vm", launcher)
         self.assertIn("export LIBGL_ALWAYS_SOFTWARE=1", launcher)
+        # sudo теряет XDG_SESSION_TYPE: без явного Wayland root-Qt выбирает
+        # xcb и завершается на недоступном XWayland display.
+        self.assertIn('if [ -n "${WAYLAND_DISPLAY:-}" ]; then', launcher)
+        self.assertIn("export QT_QPA_PLATFORM=wayland", launcher)
         # и вообще каждый модуль последовательности + GS-инвариант
         self.assertIn("module.desc", ci)
         self.assertIn("shown_choosers", ci)
