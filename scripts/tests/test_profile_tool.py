@@ -520,6 +520,10 @@ class AuditRegressionTest(unittest.TestCase):
                     / "flyarchos-install").read_text(encoding="utf-8")
         self.assertRegex(launcher, r"(?m)^\s*exec calamares\s*$")
         self.assertNotRegex(launcher, r"(?m)^\s*exec calamares\s+-c\b")
+        # VMSVGA/vmwgfx + Aquamarine убивает GPU Qt-клиентов на
+        # wl_surface.attach; установщик в ВМ должен рисоваться llvmpipe/wl_shm.
+        self.assertIn("systemd-detect-virt --vm", launcher)
+        self.assertIn("export LIBGL_ALWAYS_SOFTWARE=1", launcher)
         # и вообще каждый модуль последовательности + GS-инвариант
         self.assertIn("module.desc", ci)
         self.assertIn("shown_choosers", ci)

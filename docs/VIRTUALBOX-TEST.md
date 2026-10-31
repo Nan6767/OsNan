@@ -90,7 +90,7 @@ flyarchos-install
 > флагом `-c`. Для этого прогона запустите установщик напрямую:
 >
 > ```bash
-> sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM calamares
+> sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM env LIBGL_ALWAYS_SOFTWARE=1 calamares
 > ```
 >
 > Это дефект запуска на №58, а не успешный/неуспешный результат самой

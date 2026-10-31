@@ -834,7 +834,7 @@ flyarchos-install
 рассматривается. Запустите установщик напрямую без `-c`:
 
 ```bash
-sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM calamares
+sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,DISPLAY,XAUTHORITY,QT_QPA_PLATFORM env LIBGL_ALWAYS_SOFTWARE=1 calamares
 ```
 
 В следующих сборках launcher исправлен и снова достаточно

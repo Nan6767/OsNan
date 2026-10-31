@@ -213,6 +213,7 @@ if sfs_grep /usr/lib/flyarchos/flyarchos-install 'exec calamares -c'; then
     fail_iso "flyarchos-install запускает calamares -c и ломает поиск QML"
 fi
 sfs_grep /usr/lib/flyarchos/flyarchos-install '^    exec calamares$' || fail_iso "flyarchos-install не запускает calamares без -c"
+sfs_grep /usr/lib/flyarchos/flyarchos-install 'export LIBGL_ALWAYS_SOFTWARE=1' || fail_iso "flyarchos-install без software-GL обхода vmwgfx для ВМ"
 
 # Hyprland 0.57+ читает только Lua-конфиг. Legacy hyprland.conf в домашнем
 # каталоге означает молча потерянные автозапуск, панель, обои и бинды.
