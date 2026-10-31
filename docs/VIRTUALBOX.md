@@ -582,18 +582,25 @@ id
 
 ### Если общий буфер обмена не заработал в Hyprland
 
-Пакет ставит XDG-автозапуск `VBoxClient-all`. Plasma обычно запускает его сама;
-в сборках FlyArchOs после №58 Hyprland тоже запускает его при обнаружении
-VirtualBox. Если клиент не запущен, проверьте:
+Пакет ставит XDG-автозапуск `VBoxClient-all`. В Plasma VirtualBox сам
+распознаёт Wayland-сессию, но в Hyprland автодетект при наличии `DISPLAY` от
+XWayland может выбрать X11-backend: процесс вроде бы запущен, а буфер
+native-приложений (например, kitty) с хостом не синхронизируется. Поэтому в
+сборках FlyArchOs после №58 Hyprland запускает буфер явно через Wayland.
+
+Проверьте, что в VirtualBox включён **Bidirectional** (раздел 12.2), а затем
+посмотрите клиент:
 
 ```bash
 pgrep -a VBoxClient
 ```
 
-Для разового запуска:
+Для разового перезапуска именно буфера обмена:
 
 ```bash
-VBoxClient-all
+pkill -x VBoxClient
+VBoxClient --clipboard --session-type wayland
+pgrep -a VBoxClient
 ```
 
 Для постоянного запуска в старых сборках №57/№58 добавьте внутри
@@ -601,7 +608,7 @@ VBoxClient-all
 `~/.config/hypr/hyprland.lua` строку:
 
 ```lua
-hl.exec_cmd("VBoxClient-all")
+hl.exec_cmd("VBoxClient --clipboard --session-type wayland")
 ```
 
 Поддержка буфера обмена в Wayland зависит от версий VirtualBox, хоста и

@@ -141,7 +141,15 @@ hl.on("hyprland.start", function()
     end
     hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
     if is_virtualbox then
-        hl.exec_cmd("sh -c 'command -v VBoxClient-all >/dev/null 2>&1 && VBoxClient-all'")
+        -- Не используем VBoxClient-all: когда Hyprland даёт дочерним
+        -- процессам DISPLAY от XWayland, автодетект VirtualBox выбирает
+        -- X11-backend буфера обмена, а native Wayland-приложения (kitty и
+        -- др.) тогда не синхронизируются с хостом. Остальные пользовательские
+        -- службы запускаем как upstream-скрипт, буфер — явно через Wayland.
+        hl.exec_cmd("sh -c '[ -c /dev/vboxguest ] && command -v VBoxClient >/dev/null 2>&1 || exit 0; "
+            .. "VBoxClient --seamless; VBoxClient --draganddrop; "
+            .. "VBoxClient --checkhostversion; VBoxClient --vmsvga-session; "
+            .. "VBoxClient --clipboard --session-type wayland'")
     end
     if performance_mode then
         -- Даём панели и обоям подняться раньше сравнительно тяжёлого PyQt-окна.

@@ -716,6 +716,13 @@ class AuditRegressionTest(unittest.TestCase):
                     / "services-systemd.conf").read_text(encoding="utf-8")
         self.assertIn('"vboxservice.service"', services)
 
+        # VBoxClient-all при DISPLAY от XWayland выбирает X11 clipboard
+        # backend; native Hyprland-приложениям нужен явный Wayland.
+        lua = (self.AI / "etc" / "skel" / ".config" / "hypr"
+               / "hyprland.lua").read_text(encoding="utf-8")
+        self.assertIn("VBoxClient --clipboard --session-type wayland", lua)
+        self.assertNotIn('hl.exec_cmd("sh -c \'command -v VBoxClient-all', lua)
+
 
 class LiveSessionTest(unittest.TestCase):
     """Live-сессия без customize_airootfs.sh (archiso 91+ его не выполняет).

@@ -240,8 +240,10 @@ sfs_has /usr/share/wayland-sessions/plasma.desktop || fail_iso "нет сесс�
 
 # VirtualBox-гость должен получать интеграцию без отдельной установки пакета.
 sfs_has /usr/bin/VBoxService || fail_iso "нет VBoxService (virtualbox-guest-utils)"
+sfs_has /usr/bin/VBoxClient || fail_iso "нет VBoxClient (virtualbox-guest-utils)"
 sfs_has /etc/systemd/system/multi-user.target.wants/vboxservice.service || fail_iso "vboxservice.service не включён"
 sfs_grep /etc/group '^vboxsf:.*fly' || fail_iso "live fly не входит в vboxsf"
+sfs_grep /etc/skel/.config/hypr/hyprland.lua 'VBoxClient --clipboard --session-type wayland' || fail_iso "Hyprland не форсит Wayland-backend общего буфера VirtualBox"
 
 # Конфиг pacman УСТАНОВЛЕННОЙ системы: multilib включён, а сборочных
 # file://-репозиториев и mini-NoExtract в нём быть не должно.
