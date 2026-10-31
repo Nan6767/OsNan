@@ -7,9 +7,9 @@
 
 # Файл: packages.x86_64
 #
-# Всего пакетов: 327
+# Всего пакетов: 328
 # Профиль:  (группы: )
-# --- core (00-core.txt): 118 шт. --------------------
+# --- core (00-core.txt): 119 шт. --------------------
 base
 base-devel
 linux
@@ -99,6 +99,7 @@ dmidecode
 fwupd
 thermald
 tlp
+virtualbox-guest-utils
 pipewire
 pipewire-alsa
 pipewire-pulse

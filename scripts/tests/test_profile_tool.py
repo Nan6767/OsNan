@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -634,6 +635,69 @@ class AuditRegressionTest(unittest.TestCase):
         idle = (hypr / "hypridle.conf").read_text(encoding="utf-8")
         self.assertIn("hl.dsp.dpms", idle)
         self.assertNotIn("dispatch dpms on", idle)
+
+    def test_vm_performance_mode(self):
+        lua = (self.AI / "etc" / "skel" / ".config" / "hypr"
+               / "hyprland.lua").read_text(encoding="utf-8")
+        for needle in (
+            "/sys/class/dmi/id/product_name",
+            "detect_performance_mode",
+            "flyarchos/performance-mode",
+            "blur = {\n            enabled = visual_effects",
+            "shadow = {\n            enabled = visual_effects",
+            "animations = {\n        enabled = visual_effects",
+            "new_render_scheduling = performance_mode",
+            'mainMod .. " + F1"',
+            "flyarchos-performance toggle",
+            "--transition-type \" .. wallpaper_transition",
+            "seq 1 50",
+        ):
+            self.assertIn(needle, lua)
+
+        tool = self.AI / "usr" / "lib" / "flyarchos" / "flyarchos-performance"
+        self.assertTrue(tool.is_file())
+        self.assertTrue(tool.stat().st_mode & 0o111)
+        link = self.AI / "usr" / "bin" / "flyarchos-performance"
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(os.readlink(link), "../lib/flyarchos/flyarchos-performance")
+
+        script = tool.read_text(encoding="utf-8")
+        for needle in (
+            "systemd-detect-virt --vm",
+            "AnimationDurationFactor",
+            "blurEnabled",
+            "magiclampEnabled",
+            "plasma-performance",
+            "apply-plasma",
+        ):
+            self.assertIn(needle, script)
+
+        autostart = (self.AI / "etc" / "xdg" / "autostart"
+                     / "flyarchos-performance.desktop").read_text(encoding="utf-8")
+        self.assertIn("Exec=/usr/bin/flyarchos-performance apply-plasma", autostart)
+        self.assertIn("OnlyShowIn=KDE;", autostart)
+
+    def test_virtualbox_guest_integration_packaged(self):
+        groups = (REPO / "groups" / "00-core.txt").read_text(encoding="utf-8")
+        self.assertRegex(groups, r"(?m)^virtualbox-guest-utils$")
+
+        wants = (self.AI / "etc" / "systemd" / "system"
+                 / "multi-user.target.wants" / "vboxservice.service")
+        self.assertTrue(wants.is_symlink())
+        self.assertEqual(os.readlink(wants),
+                         "/usr/lib/systemd/system/vboxservice.service")
+
+        sysusers = (self.AI / "usr" / "lib" / "sysusers.d"
+                    / "flyarchos-live.conf").read_text(encoding="utf-8")
+        self.assertIn("m fly vboxsf", sysusers)
+
+        users = (self.AI / "etc" / "calamares" / "modules"
+                 / "users.conf").read_text(encoding="utf-8")
+        self.assertIn("name: vboxsf", users)
+
+        services = (self.AI / "etc" / "calamares" / "modules"
+                    / "services-systemd.conf").read_text(encoding="utf-8")
+        self.assertIn('"vboxservice.service"', services)
 
 
 class LiveSessionTest(unittest.TestCase):
