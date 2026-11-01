@@ -528,6 +528,13 @@ class AuditRegressionTest(unittest.TestCase):
         # xcb и завершается на недоступном XWayland display.
         self.assertIn('if [ -n "${WAYLAND_DISPLAY:-}" ]; then', launcher)
         self.assertIn("export QT_QPA_PLATFORM=wayland", launcher)
+        # В live-помощнике установка должна быть видна сразу и запускаться
+        # одним кликом; после установки Calamares отсутствует и кнопка скрыта.
+        welcome = (self.AI / "usr" / "lib" / "flyarchos"
+                   / "welcome-gui.py").read_text(encoding="utf-8")
+        self.assertIn("def installer_available()", welcome)
+        self.assertIn("Установить FlyArchOs на диск", welcome)
+        self.assertIn('subprocess.Popen(["flyarchos-install"]', welcome)
         # и вообще каждый модуль последовательности + GS-инвариант
         self.assertIn("module.desc", ci)
         self.assertIn("shown_choosers", ci)

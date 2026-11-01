@@ -45,6 +45,15 @@ def wallpapers() -> list[dict]:
     return [item for item in items if Path(item["file"]).is_file()]
 
 
+def installer_available() -> bool:
+    """Live-установщик присутствует только в live-образе, не после установки."""
+    return bool(
+        shutil.which("flyarchos-install")
+        and shutil.which("calamares")
+        and Path("/etc/calamares/settings.conf").is_file()
+    )
+
+
 def run_visible(command: list[str]) -> None:
     """Запустить команду «как видно пользователю»: в терминале или через pkexec."""
     term = shutil.which("kitty") or shutil.which("konsole") or shutil.which("xterm")
@@ -169,6 +178,27 @@ def gui_mode() -> int:
     titles.addWidget(subtitle)
     header.addLayout(titles, 1)
     layout.addLayout(header)
+
+    # В live-режиме установка должна находиться в один клик и не требовать
+    # поиска ярлыка или ручных команд в терминале. После установки Calamares
+    # из образа удалён, поэтому блок автоматически не показывается.
+    if installer_available():
+        install_btn = QPushButton("💿  Установить FlyArchOs на диск")
+        install_btn.setMinimumHeight(46)
+        install_btn.setFont(QFont("Noto Sans", 12, QFont.Weight.Bold))
+
+        def launch_installer() -> None:
+            subprocess.Popen(["flyarchos-install"], start_new_session=True)
+            window.close()
+
+        install_btn.clicked.connect(launch_installer)
+        layout.addWidget(install_btn)
+        live_note = QLabel(
+            "Сейчас вы находитесь в live-системе: её изменения не сохранятся "
+            "после перезагрузки. Для обычной установки достаточно нажать кнопку выше."
+        )
+        live_note.setWordWrap(True)
+        layout.addWidget(live_note)
 
     # --- обои -------------------------------------------------------------
     layout.addWidget(QLabel("<b>Обои</b>"))
