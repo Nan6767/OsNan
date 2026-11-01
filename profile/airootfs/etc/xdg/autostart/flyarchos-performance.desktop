@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=FlyArchOs Performance
+Name[ru]=Производительность FlyArchOs
+Comment=Apply the lightweight graphics profile in virtual machines
+Comment[ru]=Применить облегчённый графический профиль в виртуальных машинах
+Exec=/usr/bin/flyarchos-performance apply-plasma
+OnlyShowIn=KDE;
+NoDisplay=true
+Terminal=false
+X-GNOME-Autostart-enabled=true

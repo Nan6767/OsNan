@@ -7,7 +7,7 @@ OsNan/
 ├── .gitignore
 │
 ├── groups/                   ★ список пакетов — источник правды
-│   ├── 00-core.txt           118  ядро, сеть, диски, звук, консоль
+│   ├── 00-core.txt           119  ядро, сеть, диски, звук, консоль, VBox-гость
 │   ├── 10-common.txt          43  шрифты, темы, Wayland-утилиты
 │   ├── 20-hyprland.txt        15  Hyprland + Waybar/Wofi/Mako/Kitty
 │   ├── 30-plasma.txt          47  KDE Plasma + SDDM + KDE-приложения
@@ -51,6 +51,7 @@ OsNan/
 │       │   │   ├── install-prepare.sh   шаг установки: чистка live-мусора
 │       │   │   ├── install-finalize.sh  шаг установки: обои, SDDM, тема GRUB
 │       │   │   ├── flyarchos-info       краткая справка
+│       │   │   ├── flyarchos-performance лёгкая графика для ВМ/слабого GPU
 │       │   │   └── flyarchos-install    запуск Calamares
 │       │   ├── bin/flyarchos-*          симлинки на инструменты
 │       │   └── share/

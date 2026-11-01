@@ -25,10 +25,12 @@
     },
     "clock": {
         "format": "{:%H:%M}",
+        "interval": 30,
         "tooltip-format": "{:%A, %d %B %Y}"
     },
     "clock2": {
         "format": " {:%d.%m}",
+        "interval": 300,
         "tooltip": false
     },
     "pulseaudio": {
@@ -44,7 +46,7 @@
         "format-disconnected": "  нет сети",
         "on-click": "nm-connection-editor",
         "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-        "interval": 5
+        "interval": 15
     },
     "bluetooth": {
         "format": " {status}",
@@ -54,6 +56,7 @@
         "tooltip": false
     },
     "battery": {
+        "interval": 30,
         "states": { "warning": 30, "critical": 12 },
         "format": "{icon} {capacity}%",
         "format-charging": " {capacity}%",
@@ -62,7 +65,7 @@
     },
     "custom/updates": {
         "exec": "n=$(checkupdates 2>/dev/null | wc -l); [ \"$n\" -gt 0 ] && echo \"↑ $n\" || true",
-        "interval": 3600,
+        "interval": 21600,
         "hide-if-empty": true,
         "tooltip": false,
         "on-click": "kitty -e flyarchos-update"
@@ -77,7 +80,7 @@
     },
     "custom/temp": {
         "exec": "for z in /sys/class/thermal/thermal_zone*; do if [ \"$(cat $z/type 2>/dev/null)\" = \"x86_pkg_temp\" ]; then t=$(cat $z/temp 2>/dev/null); [ -n \"$t\" ] && echo \"$((t/1000))°C\"; exit 0; fi; done; true",
-        "interval": 5,
+        "interval": 30,
         "hide-if-empty": true,
         "tooltip": true,
         "tooltip-format": "Температура процессора"

@@ -7,7 +7,7 @@
 
 ## 1. Загрузка с флешки
 
-1. Запишите ISO: `sudo dd if=flyarchos-1.7.0-beta-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
+1. Запишите ISO: `sudo dd if=flyarchos-1.8.0-beta-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
    (или Ventoy / balenaEtcher — поддерживается и UEFI, и BIOS).
 2. Загрузитесь с флешки. Live-сессия сама войдёт в **Hyprland** под
    пользователем `fly` (пароль `flyarchos`, у root тот же пароль).
@@ -19,9 +19,11 @@
 
 ## 2. Запуск установщика
 
-* Ярлык **Install FlyArchOs** в меню приложений (в Hyprland: `Super+D`, затем
-  поиск по слову `Install`),
-* или `flyarchos-install` в терминале (поднимается Calamares),
+* Кнопка **«Установить FlyArchOs на диск»** в приветственном окне live-системы
+  (самый простой способ),
+* или ярлык **Install FlyArchOs** в меню приложений (в Hyprland: `Super+D`,
+  затем поиск по слову `Install`),
+* или запасная команда `flyarchos-install` в терминале (поднимается Calamares),
 * запасной вариант — `archinstall` (консольный установщик Arch).
 
 Интернет **не нужен**: все пакеты уже внутри образа.

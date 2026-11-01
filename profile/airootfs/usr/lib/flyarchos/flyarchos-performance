@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# flyarchos-performance — облегчённый графический режим для ВМ/слабого GPU.
+#
+#   flyarchos-performance status   показать режим и тип виртуализации
+#   flyarchos-performance auto     включать автоматически в виртуальной машине
+#   flyarchos-performance on       всегда включать
+#   flyarchos-performance off      всегда выключать (полные эффекты)
+#   flyarchos-performance toggle   переключить (Super+F1 в Hyprland)
+#
+# В Hyprland режим отключает blur/тени/анимации/прозрачность и включает
+# новый планировщик кадров. В Plasma отключает blur и тяжёлые анимации и
+# ставит AnimationDurationFactor=0. Выбор хранится в
+# ~/.config/flyarchos/performance-mode.
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+CONFIG_HOME=${XDG_CONFIG_HOME:-${HOME:-}/.config}
+STATE_HOME=${XDG_STATE_HOME:-${HOME:-}/.local/state}
+MODE_FILE="$CONFIG_HOME/flyarchos/performance-mode"
+PLASMA_STATE_FILE="$STATE_HOME/flyarchos/plasma-performance"
+
+C_CYAN=$'\033[36m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
+
+usage() {
+    sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
+
+normalize_mode() {
+    local value=${1:-auto}
+    value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
+    read -r value _ <<< "$value"
+    case "$value" in
+        on|1|true|yes|enable|enabled) printf 'on\n' ;;
+        off|0|false|no|disable|disabled) printf 'off\n' ;;
+        *) printf 'auto\n' ;;
+    esac
+}
+
+requested_mode() {
+    local value=${FLYARCHOS_PERFORMANCE_MODE:-}
+    if [ -z "$value" ] && [ -r "$MODE_FILE" ]; then
+        IFS= read -r value < "$MODE_FILE" || true
+    fi
+    normalize_mode "$value"
+}
+
+VIRT_ID=none
+IS_VM=0
+
+detect_virt() {
+    if command -v systemd-detect-virt >/dev/null 2>&1; then
+        if VIRT_ID=$(systemd-detect-virt --vm 2>/dev/null); then
+            IS_VM=1
+        else
+            VIRT_ID=none
+            IS_VM=0
+        fi
+    fi
+}
+
+is_effective_on() {
+    case "$(requested_mode)" in
+        on) return 0 ;;
+        off) return 1 ;;
+        *) [ "$IS_VM" = "1" ] ;;
+    esac
+}
+
+write_mode() {
+    local mode=$1
+    if [ -z "${HOME:-}" ] && [ -z "${XDG_CONFIG_HOME:-}" ]; then
+        printf 'flyarchos-performance: не задан HOME/XDG_CONFIG_HOME\n' >&2
+        return 1
+    fi
+    mkdir -p "$(dirname "$MODE_FILE")"
+    printf '%s\n' "$mode" > "$MODE_FILE"
+}
+
+kde_writer() {
+    if command -v kwriteconfig6 >/dev/null 2>&1; then
+        command -v kwriteconfig6
+    elif command -v kwriteconfig5 >/dev/null 2>&1; then
+        command -v kwriteconfig5
+    fi
+}
+
+kde_set() {
+    local writer
+    writer=$(kde_writer)
+    [ -n "$writer" ] || return 0
+    "$writer" --file "$1" --group "$2" --key "$3" "$4" >/dev/null 2>&1 || true
+}
+
+kde_delete() {
+    local writer
+    writer=$(kde_writer)
+    [ -n "$writer" ] || return 0
+    "$writer" --file "$1" --group "$2" --key "$3" --delete >/dev/null 2>&1 || true
+}
+
+plasma_state() {
+    local value=auto
+    if [ -r "$PLASMA_STATE_FILE" ]; then
+        IFS= read -r value < "$PLASMA_STATE_FILE" || true
+    fi
+    normalize_mode "$value"
+}
+
+write_plasma_state() {
+    mkdir -p "$(dirname "$PLASMA_STATE_FILE")"
+    printf '%s\n' "$1" > "$PLASMA_STATE_FILE"
+}
+
+reconfigure_kwin() {
+    local desktops="${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_DESKTOP:-}"
+    case "$desktops" in
+        *KDE*|*Kde*|*kde*|*Plasma*|*plasma*) ;;
+        *) return 0 ;;
+    esac
+
+    if command -v dbus-send >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
+        timeout 2 dbus-send --session --dest=org.kde.KWin --type=method_call \
+            /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+    fi
+}
+
+# $1=1 только после явной команды пользователя. При обычном автозапуске на
+# реальном железе настройки Plasma не трогаем: иначе скрипт каждый вход
+# возвращал бы blur/анимации тем, кто сам их выключил.
+apply_plasma() {
+    local force=${1:-0}
+    local state
+    state=$(plasma_state)
+
+    if is_effective_on; then
+        kde_set kwinrc Plugins blurEnabled false
+        kde_set kwinrc Plugins magiclampEnabled false
+        kde_set kwinrc Plugins slideEnabled false
+        kde_set kwinrc Plugins slidingpopupsEnabled false
+        kde_set kwinrc Plugins scaleEnabled false
+        kde_set kdeglobals KDE AnimationDurationFactor 0
+        kde_delete kwinrc KDE AnimationDurationFactor
+        write_plasma_state on
+        reconfigure_kwin
+    elif [ "$force" = "1" ] || [ "$state" = "on" ]; then
+        kde_set kwinrc Plugins blurEnabled true
+        kde_set kwinrc Plugins magiclampEnabled true
+        kde_set kwinrc Plugins slideEnabled true
+        kde_set kwinrc Plugins slidingpopupsEnabled true
+        kde_set kwinrc Plugins scaleEnabled true
+        kde_delete kdeglobals KDE AnimationDurationFactor
+        kde_delete kwinrc KDE AnimationDurationFactor
+        write_plasma_state off
+        reconfigure_kwin
+    fi
+}
+
+reload_hyprland() {
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] \
+        && command -v hyprctl >/dev/null 2>&1; then
+        # hyprland.start при reload не запускается заново, поэтому клиентский
+        # software-GL для SVGA синхронизируем прямо в живом композиторе.
+        case "$VIRT_ID" in
+            oracle|vmware)
+                if is_effective_on; then
+                    hyprctl eval 'hl.env("LIBGL_ALWAYS_SOFTWARE", "1")' \
+                        >/dev/null 2>&1 || true
+                else
+                    hyprctl eval 'hl.env("LIBGL_ALWAYS_SOFTWARE", "0")' \
+                        >/dev/null 2>&1 || true
+                fi
+                ;;
+        esac
+        hyprctl reload >/dev/null 2>&1 || true
+    fi
+}
+
+apply_current() {
+    local force=${1:-0}
+    apply_plasma "$force"
+    reload_hyprland
+}
+
+notify_current() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || return 0
+    if is_effective_on; then
+        notify-send -a FlyArchOs "Режим производительности включён" \
+            "Эффекты Hyprland/Plasma облегчены для виртуального или слабого GPU." \
+            >/dev/null 2>&1 || true
+    else
+        notify-send -a FlyArchOs "Режим производительности выключен" \
+            "Возвращены полные графические эффекты." \
+            >/dev/null 2>&1 || true
+    fi
+}
+
+print_status() {
+    local requested effective
+    requested=$(requested_mode)
+    if is_effective_on; then effective=on; else effective=off; fi
+
+    printf '%sFlyArchOs performance%s\n' "$C_CYAN" "$C_OFF"
+    printf '  Запрошено:       %s\n' "$requested"
+    printf '  Фактически:      %s\n' "$effective"
+    printf '  Виртуализация:   %s\n' "$VIRT_ID"
+    printf '  Файл выбора:     %s\n' "$MODE_FILE"
+    printf '%s  Команды: auto | on | off | toggle (в Hyprland — Super+F1)%s\n' \
+        "$C_DIM" "$C_OFF"
+}
+
+detect_virt
+
+case "${1:-status}" in
+    status)
+        print_status
+        ;;
+    effective)
+        if is_effective_on; then printf 'on\n'; else printf 'off\n'; fi
+        ;;
+    auto|on|off)
+        write_mode "$1" || exit 1
+        apply_current 1
+        notify_current
+        print_status
+        ;;
+    toggle)
+        if is_effective_on; then
+            write_mode off || exit 1
+        else
+            write_mode on || exit 1
+        fi
+        apply_current 1
+        notify_current
+        print_status
+        ;;
+    apply)
+        apply_current 0
+        ;;
+    apply-plasma)
+        apply_plasma 0
+        ;;
+    -h|--help|help)
+        usage
+        ;;
+    *)
+        printf 'flyarchos-performance: неизвестная команда: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

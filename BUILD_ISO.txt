@@ -71,3 +71,4 @@ trigger: 1.7.0-beta full (boot fix)
 # триггер: mini, AUR-пакеты (Calamares) реально добавляются в список mkarchiso
 # триггер: full, AUR-пакеты (Calamares) реально добавляются в список mkarchiso
 # Кандидаты: mini №56 и full №57. Профиль по умолчанию снова mini (одним файлом).
+# триггер: 1.8.0-beta mini, установка в один клик, исправления Calamares и VirtualBox

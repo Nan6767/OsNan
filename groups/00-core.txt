@@ -104,6 +104,10 @@ fwupd
 thermald
 tlp
 
+# Интеграция гостя VirtualBox. vboxservice.service имеет
+# ConditionVirtualization=oracle и на обычном железе просто пропускается.
+virtualbox-guest-utils
+
 # Звук (PipeWire)
 pipewire
 pipewire-alsa

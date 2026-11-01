@@ -50,28 +50,31 @@ x86_64-виртуальную машину.
 **full** нужен, если хотите сразу проверить все дополнительные наборы ПО,
 пресеты установщика и второе ядро.
 
-Актуальные на момент написания бета-образы 1.7.0-beta:
+Актуальный рекомендуемый бета-образ — **FlyArchOs 1.8.0-beta Mini №59**.
+Full №57 ниже — предыдущий полный вариант 1.7.0-beta.
 
-#### Mini №58 — рекомендуется для первого запуска
+#### Mini №59 (1.8.0-beta) — рекомендуется для первого запуска
 
-- Страница релиза: <https://github.com/Nan6767/OsNan/releases/tag/iso-58-mini>
-- Прямой ISO: <https://github.com/Nan6767/OsNan/releases/download/iso-58-mini/flyarchos-1.7.0-beta-x86_64.iso>
-- Размер: `1 911 767 040` байт
+- Страница релиза: <https://github.com/Nan6767/OsNan/releases/tag/iso-59-mini>
+- Прямой ISO: <https://github.com/Nan6767/OsNan/releases/download/iso-59-mini/flyarchos-1.8.0-beta-x86_64.iso>
+- Размер: `1 913 618 432` байта
 - SHA-256:
 
 ```text
-e1ed46fad5443bb1c6e5ce71943af2c568fe59e3432f82579b750b012797ae07
+48fb7e8ad9347fd78ce53ec3fc9a3f8240ca80776b90e2ae1c8b0c9d9183e5fa
 ```
 
-Mini №56 был первым образом, для которого CI доказал наличие Calamares;
-№58 собран позже из `main` после слияния тех же исправлений и заменяет №56
-для новых загрузок.
+Mini №59 заменяет №58: в неё входят исправленный запуск Calamares без
+ручных команд, кнопка установки в live-помощнике, гостевые утилиты
+VirtualBox и облегчённый режим производительности для ВМ.
 
-#### Full №57
+#### Full №57 (1.7.0-beta, предыдущий полный вариант)
 
 - Страница релиза: <https://github.com/Nan6767/OsNan/releases/tag/iso-57-full>
-- Один ZIP из артефакта сборки:
-  <https://nightly.link/Nan6767/OsNan/suites/110574858273/artifacts/12864344250>
+- Один ZIP из артефакта сборки (прямая загрузка `.zip`):
+  <https://nightly.link/Nan6767/OsNan/actions/runs/40792766889/flyarchos-full-iso-57.zip>
+- Запасная ссылка на тот же артефакт:
+  <https://nightly.link/Nan6767/OsNan/actions/artifacts/12864344250.zip>
 - SHA-256 готового ISO:
 
 ```text
@@ -102,24 +105,26 @@ cat flyarchos-1.7.0-beta-x86_64.iso.part* > flyarchos-1.7.0-beta-x86_64.iso
 Windows PowerShell:
 
 ```powershell
-Get-FileHash .\flyarchos-1.7.0-beta-x86_64.iso -Algorithm SHA256
+Get-FileHash .\flyarchos-1.8.0-beta-x86_64.iso -Algorithm SHA256
 ```
 
 Linux:
 
 ```bash
-sha256sum flyarchos-1.7.0-beta-x86_64.iso
+sha256sum flyarchos-1.8.0-beta-x86_64.iso
 ```
 
 macOS:
 
 ```bash
-shasum -a 256 flyarchos-1.7.0-beta-x86_64.iso
+shasum -a 256 flyarchos-1.8.0-beta-x86_64.iso
 ```
 
-Результат должен совпасть с SHA-256 выбранного образа выше. Для более
-поздних релизов сверяйтесь не с числами в этом файле, а с файлом
-`*.iso.sha256` и описанием именно того релиза, который скачали.
+Команды выше показаны для Mini №59; для Full №57 замените имя файла на
+`flyarchos-1.7.0-beta-x86_64.iso`. Результат должен совпасть с SHA-256
+выбранного образа выше. Для более поздних релизов сверяйтесь не с числами в
+этом файле, а с файлом `*.iso.sha256` и описанием именно того релиза,
+который скачали.
 
 ---
 
@@ -134,8 +139,8 @@ shasum -a 256 flyarchos-1.7.0-beta-x86_64.iso
 
 | Поле | Значение |
 |---|---|
-| **Name** | `FlyArchOs` или `FlyArchOs 1.7 beta` |
-| **ISO Image** | скачанный `flyarchos-1.7.0-beta-x86_64.iso` |
+| **Name** | `FlyArchOs` или `FlyArchOs 1.8 beta` |
+| **ISO Image** | скачанный `flyarchos-1.8.0-beta-x86_64.iso` |
 | **Type** | `Linux` |
 | **Version** | `Arch Linux (64-bit)` |
 | **Skip Unattended Installation** | **включить** |
@@ -205,16 +210,18 @@ Plasma будут работать заметно тяжелее. Не выде�
 - **Monitor Count:** `1`;
 - **Enable 3D Acceleration:** включить для первого запуска.
 
-Если после загрузки чёрный экран, искажённая картинка или Hyprland/Plasma
-падают, полностью выключите ВМ и отключите 3D-ускорение. Остальные параметры
-при этом не меняйте.
+Если Hyprland после ввода пароля сразу возвращает экран SDDM, 3D-ускорение,
+наоборот, должно быть **включено**: без рабочего OpenGL сессия Hyprland в
+VirtualBox не стартует. Отключение 3D — только отдельный эксперимент при
+артефактах или чёрном экране в Plasma; после него для входа выбирайте Plasma,
+а не Hyprland. Остальные параметры при такой проверке не меняйте.
 
 ### 4.3. Накопители и подключённый ISO
 
 **Settings → Storage** должен показывать примерно такую картину:
 
 - контроллер SATA → виртуальный жёсткий диск `.vdi`;
-- оптический привод → `flyarchos-1.7.0-beta-x86_64.iso`.
+- оптический привод → `flyarchos-1.8.0-beta-x86_64.iso`.
 
 Если вместо ISO написано **Empty**, подключите образ вручную по инструкции из
 следующего раздела.
@@ -262,7 +269,7 @@ Plasma будут работать заметно тяжелее. Не выде�
    оптического привода.
 4. Справа в разделе **Attributes** нажмите значок диска рядом с полем привода.
 5. Выберите **Choose/Create a Virtual Optical Disk…**.
-6. Нажмите **Add**, найдите файл `flyarchos-1.7.0-beta-x86_64.iso` и откройте его.
+6. Нажмите **Add**, найдите файл `flyarchos-1.8.0-beta-x86_64.iso` и откройте его.
 7. Выделите ISO в списке и нажмите **Choose**.
 8. Убедитесь, что теперь в Storage вместо `Empty` указан ISO.
 9. В **Settings → System → Motherboard** поставьте **Optical** первым в
@@ -323,17 +330,14 @@ Plasma будут работать заметно тяжелее. Не выде�
 
 ## 7. Установка FlyArchOs на виртуальный диск
 
-В live-сессии:
+В live-сессии Mini №59:
 
-1. Нажмите `Super+D`.
-2. Введите `Install`.
-3. Запустите **Install FlyArchOs**.
+1. В приветственном окне нажмите **«Установить FlyArchOs на диск»**.
+2. Если окно закрыто, нажмите `Super+D`, введите `Install` и запустите
+   **Install FlyArchOs**.
 
-Если ярлык не находится, откройте терминал (`Super+Enter`) и выполните:
-
-```bash
-flyarchos-install
-```
+Терминал для запуска установщика не нужен. Если ярлык не находится,
+запасная команда в терминале (`Super+Enter`) — `flyarchos-install`.
 
 Для первой проверки рекомендуется базовый сценарий:
 
@@ -545,15 +549,18 @@ IP смотрите в госте командой `ip -brief address`.
 Guest Additions добавляют удобную интеграцию: общие папки, общий буфер
 обмена, drag-and-drop, синхронизацию времени и лучшую работу с размером окна.
 
-> Устанавливайте Guest Additions **только в уже установленную систему**, а не
-> в live-сессию. Изменения в live-сессии исчезнут после перезагрузки.
+> Начиная с Mini №59 пакет `virtualbox-guest-utils` уже входит в FlyArchOs,
+> а `vboxservice.service` включён. На старых Full №57/Mini №58 выполните
+> установку ниже в уже установленной системе; в live-сессии изменения
+> исчезнут после перезагрузки.
 
 Для FlyArchOs, как и для Arch Linux, предпочтительнее пакет из репозиториев
 Arch, а не ручная установка с ISO Oracle. Не смешивайте оба способа: если
 поставлен пакет Arch ниже, не запускайте дополнительно установщик через
 **Devices → Insert Guest Additions CD Image**.
 
-В установленной FlyArchOs выполните:
+В установленной FlyArchOs выполните (команда с `--needed` безопасна и там, где
+пакет уже есть):
 
 ```bash
 sudo pacman -Syu --needed virtualbox-guest-utils
@@ -575,24 +582,33 @@ id
 
 ### Если общий буфер обмена не заработал в Hyprland
 
-Пакет ставит XDG-автозапуск `VBoxClient-all`. Plasma обычно запускает его сама.
-Если в Hyprland клиент не запущен, проверьте:
+Пакет ставит XDG-автозапуск `VBoxClient-all`. В Plasma VirtualBox сам
+распознаёт Wayland-сессию, но в Hyprland автодетект при наличии `DISPLAY` от
+XWayland может выбрать X11-backend: процесс вроде бы запущен, а буфер
+native-приложений (например, kitty) с хостом не синхронизируется. Поэтому в
+сборках FlyArchOs после №58 Hyprland запускает буфер явно через Wayland.
+
+Проверьте, что в VirtualBox включён **Bidirectional** (раздел 12.2), а затем
+посмотрите клиент:
 
 ```bash
 pgrep -a VBoxClient
 ```
 
-Для разового запуска:
+Для разового перезапуска именно буфера обмена:
 
 ```bash
-VBoxClient-all
+pkill -x VBoxClient
+VBoxClient --clipboard --session-type wayland
+pgrep -a VBoxClient
 ```
 
-Для постоянного запуска добавьте внутри существующего обработчика
-`hyprland.start` в `~/.config/hypr/hyprland.lua` строку:
+Для постоянного запуска в старых сборках №57/№58 добавьте внутри
+существующего обработчика `hyprland.start` в
+`~/.config/hypr/hyprland.lua` строку:
 
 ```lua
-hl.exec_cmd("VBoxClient-all")
+hl.exec_cmd("VBoxClient --clipboard --session-type wayland")
 ```
 
 Поддержка буфера обмена в Wayland зависит от версий VirtualBox, хоста и
@@ -751,10 +767,51 @@ ISO всё ещё подключён и стоит раньше жёсткого
 
 1. Подождите 1–2 минуты при первом запуске.
 2. Полностью выключите ВМ.
-3. В **Display** оставьте VMSVGA и 128 МБ, но отключите **3D Acceleration**.
-4. Запустите снова.
-5. Если не помогло, обновите VirtualBox на хосте и попробуйте выбрать Plasma
-   на экране входа SDDM.
+3. В **Display** проверьте VMSVGA, 128 МБ и **включённое 3D Acceleration** —
+   это обязательный режим для Hyprland.
+4. Запустите снова и попробуйте Hyprland.
+5. Если именно с 3D видны артефакты или чёрный экран, отдельным экспериментом
+   отключите 3D и на экране SDDM выберите **Plasma**. Hyprland без 3D может
+   сразу возвращаться на экран входа — это ожидаемо.
+6. Обновите VirtualBox на хосте, если оба варианта дают чёрный экран.
+
+### Медленно: мышь, окна и анимации отстают
+
+Виртуальная VMSVGA заметно медленнее обычной видеокарты, поэтому сначала
+уменьшайте работу композитора, а не переустанавливайте систему:
+
+1. Оставьте один виртуальный монитор, VMSVGA, 128 МБ видеопамяти и включённое
+   3D. Для ВМ выделите 4 CPU и лучше 12 ГБ RAM, если хост позволяет.
+2. Уменьшите окно/разрешение гостя до 1600×900 или 1280×720 и используйте
+   масштаб 100%. Полный экран на 4K для VMSVGA может быть тяжёлым даже на
+   быстром хосте.
+3. В сборках после №58 облегчённый режим в ВМ включается автоматически.
+   Проверка и ручное управление:
+
+   ```bash
+   flyarchos-performance status
+   flyarchos-performance auto   # автоматически в ВМ
+   flyarchos-performance on     # всегда лёгкая графика
+   flyarchos-performance off    # полные эффекты
+   ```
+
+   В Hyprland его также переключает `Super+F1`. Режим отключает blur, тени и
+   анимации в Hyprland, а в Plasma — blur/Magic Lamp и ставит мгновенные
+   анимации. Если уже запущенная Plasma не применила эффект сразу, завершите
+   сеанс и войдите снова.
+4. На уже выпущенных №57/№58 автоматики ещё нет. В текущей сессии Hyprland
+   эффекты можно временно выключить командой из терминала:
+
+   ```bash
+   hyprctl eval 'hl.config({animations={enabled=false},decoration={rounding=0,inactive_opacity=1,blur={enabled=false},shadow={enabled=false}},render={new_render_scheduling=true},misc={render_unfocused_fps=5}})'
+   ```
+
+   Вернуть конфиг: `hyprctl reload`. В Plasma на этих сборках поставьте
+   **System Settings → Workspace Behavior → Animation speed → Instant** и
+   отключите **Desktop Effects → Blur** и **Magic Lamp**.
+5. Если медленно только первые 1–2 минуты, дождитесь окончания автозапуска:
+   live-система одновременно поднимает панель, сеть, уведомления и помощника
+   первого запуска.
 
 ### VirtualBox сообщает, что VT-x/AMD-V недоступна
 
@@ -765,9 +822,9 @@ ISO всё ещё подключён и стоит раньше жёсткого
 
 ### Не открывается Calamares
 
-Сначала убедитесь, что используете mini №58, full №57 или более новую
-исправленную сборку, а не один из отозванных образов №49–№55. Mini №56 тоже
-содержит Calamares по CI-проверкам, но для новой загрузки заменён №58.
+Сначала убедитесь, что используете Mini №59 или более новую исправленную
+сборку, а не Mini №58 и не один из отозванных образов №49–№55. Full №57 —
+предыдущий полный вариант с известным ручным обходом запуска Calamares ниже.
 В live-терминале выполните:
 
 ```bash
@@ -776,6 +833,24 @@ pacman -Q calamares
 ls /usr/lib/calamares/modules/packagechooser/
 flyarchos-install
 ```
+
+Если на Full №57/Mini №58 появляется
+`explicitly configured application data directory is missing qml/`, это
+известный баг `flyarchos-install`: он запускает Calamares с тестовым флагом
+`-c /etc/calamares`, из-за чего пакетный `/usr/share/calamares/qml` не
+рассматривается. Запустите установщик напрямую без `-c`, явно выбрав
+native Wayland и программный GL для ВМ:
+
+```bash
+sudo --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR env QT_QPA_PLATFORM=wayland LIBGL_ALWAYS_SOFTWARE=1 calamares
+```
+
+`QT_QPA_PLATFORM=wayland` здесь обязательна: sudo не сохраняет
+`XDG_SESSION_TYPE`, и без явного указания root-Qt на этих сборках выбирает
+`xcb`, после чего падает с `could not connect to display :1`.
+
+Начиная с Mini №59 launcher исправлен: используйте кнопку в live-помощнике,
+ярлык **Install FlyArchOs** или команду `flyarchos-install`.
 
 Лог запуска Calamares:
 
@@ -833,7 +908,7 @@ FlyArchOs — «жирный» офлайн-образ, установщику �
 
 | Настройка | Значение |
 |---|---|
-| ISO | mini №58 одним файлом для первого теста |
+| ISO | Mini №59 (1.8.0-beta) одним файлом для первого теста |
 | Тип ОС | Linux → Arch Linux (64-bit) |
 | Unattended Installation | **Skip** |
 | RAM | 12 ГБ |
@@ -847,7 +922,7 @@ FlyArchOs — «жирный» офлайн-образ, установщику �
 | USB | USB 3.0 (xHCI) |
 | После установки | **извлечь ISO** |
 | Live-вход | `fly / flyarchos` |
-| Установщик | `Super+D` → Install FlyArchOs |
+| Установщик | кнопка «Установить FlyArchOs на диск» в live-помощнике |
 
 ---
 
