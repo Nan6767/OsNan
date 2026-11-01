@@ -1,4 +1,4 @@
-# Проверка FlyArchOs 1.8.0-beta в VirtualBox
+# Проверка FlyArchOs 1.9.0-beta в VirtualBox
 
 Этот чек-лист нужен для первого полного ручного теста кандидата:
 live-загрузка → Calamares → офлайн-установка → первая загрузка установленной
@@ -12,22 +12,23 @@ live-загрузка → Calamares → офлайн-установка → пе
 
 ## 1. Какой образ тестировать первым
 
-Используйте **Mini №59** — актуальную сборку FlyArchOs 1.8.0-beta с
-исправленным запуском Calamares, кнопкой установки в live-помощнике и
-гостевыми утилитами VirtualBox. В её CI-логе подтверждены установленные
-`calamares` и `virtualbox-guest-utils`, модуль `packagechooser` и финальная
-проверка содержимого образа. Mini №59 заменяет №58 для этого E2E-теста:
+Используйте **Mini №61** — актуальную сборку FlyArchOs 1.9.0-beta с
+исправленным запуском Calamares, кнопкой установки в live-помощнике,
+гостевыми утилитами VirtualBox и сниженным порогом диска установщика
+(16 ГБ). В её CI-логе подтверждены установленные `calamares` и
+`virtualbox-guest-utils`, модуль `packagechooser` и финальная проверка
+содержимого образа. Mini №61 заменяет №59/№60 для этого E2E-теста:
 
-- ISO одним файлом: <https://github.com/Nan6767/OsNan/releases/download/iso-59-mini/flyarchos-1.8.0-beta-x86_64.iso>
-- Релиз: <https://github.com/Nan6767/OsNan/releases/tag/iso-59-mini>
+- ISO одним файлом: <https://github.com/Nan6767/OsNan/releases/download/iso-61-mini/flyarchos-1.9.0-beta-x86_64.iso>
+- Релиз: <https://github.com/Nan6767/OsNan/releases/tag/iso-61-mini>
 - Размер: `1 913 618 432` байта
-- SHA-256: `48fb7e8ad9347fd78ce53ec3fc9a3f8240ca80776b90e2ae1c8b0c9d9183e5fa`
-- Лог сборки: [../logs/iso-run-59.log](../logs/iso-run-59.log)
+- SHA-256: `2024e37e19673940ab20e7824ab2513d9325eadd6acea49234a20cfff8cf6a31`
+- Лог сборки: [../logs/iso-run-61.log](../logs/iso-run-61.log)
 
 Проверка контрольной суммы в PowerShell:
 
 ```powershell
-Get-FileHash .\flyarchos-1.8.0-beta-x86_64.iso -Algorithm SHA256
+Get-FileHash .\flyarchos-1.9.0-beta-x86_64.iso -Algorithm SHA256
 ```
 
 Не используйте для этого теста образы №49–№55: в них найдены дефекты
@@ -71,7 +72,7 @@ Get-FileHash .\flyarchos-1.8.0-beta-x86_64.iso -Algorithm SHA256
 выбрать Plasma.
 
 Если графика заметно тормозит, запишите разрешение окна ВМ, число CPU/RAM и
-состояние 3D. В Mini №59 режим производительности для ВМ должен включиться
+состояние 3D. В Mini №61 режим производительности для ВМ должен включиться
 автоматически; проверьте `flyarchos-performance status` и при необходимости
 используйте раздел «Медленно» в [VIRTUALBOX.md](VIRTUALBOX.md).
 
@@ -203,5 +204,5 @@ flyarchos-install
 - можно войти в выбранное окружение под созданным пользователем;
 - Calamares отсутствует в установленной системе.
 
-До этого результата FlyArchOs 1.8.0-beta Mini №59 остаётся кандидатом для
+До этого результата FlyArchOs 1.9.0-beta Mini №61 остаётся кандидатом для
 проверки, а не доказанно рабочей стабильной системой.
