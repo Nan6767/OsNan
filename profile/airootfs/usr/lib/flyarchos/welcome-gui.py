@@ -132,7 +132,7 @@ def gui_mode() -> int:
         from PyQt6.QtWidgets import (
             QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout,
             QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-            QPushButton, QTextEdit, QVBoxLayout, QWidget,
+            QPushButton, QScrollArea, QTextEdit, QVBoxLayout, QWidget,
         )
     except ImportError:
         try:
@@ -141,7 +141,7 @@ def gui_mode() -> int:
             from PySide6.QtWidgets import (
                 QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout,
                 QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-                QPushButton, QTextEdit, QVBoxLayout, QWidget,
+                QPushButton, QScrollArea, QTextEdit, QVBoxLayout, QWidget,
             )
         except ImportError:
             print("Qt не найден — переключаюсь в текстовый режим.", file=sys.stderr)
@@ -218,7 +218,10 @@ def gui_mode() -> int:
             set_wallpaper(ident),
             status.setText(f"Обои установлены: {ident}"),
         ))
-        grid.addWidget(button, index // 6, index % 6)
+        # 4 колонки по 212 px как раз влезают в исходную ширину окна
+        # (880 px); 6 колонок требовали ~1330 px и на маленьком экране
+        # VirtualBox уезжали за край.
+        grid.addWidget(button, index // 4, index % 4)
     layout.addLayout(grid)
 
     wall_row = QHBoxLayout()
@@ -323,7 +326,17 @@ def gui_mode() -> int:
     layout.addWidget(status)
     layout.addLayout(bottom)
 
-    window.setCentralWidget(central)
+    # Содержимое выше исходных 620 px (обои + наборы + инструменты):
+    # на маленьком экране ВМ низ окна уезжал за пределы и кнопки были
+    # недоступны. Прокрутка + ограничение окна размером экрана.
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setWidget(central)
+    window.setCentralWidget(scroll)
+    screen = app.primaryScreen()
+    if screen is not None:
+        avail = screen.availableGeometry()
+        window.resize(min(880, avail.width()), min(620, avail.height()))
     window.show()
     return app.exec()
 

@@ -236,6 +236,19 @@ text = re.sub(r"airootfs_image_tool_options=\([^)]*\)",
 text, count=1)
 open(path, "w", encoding="utf-8").write(text)
 PYEOF
+        # Mini ставится на диск целиком из ~5,5 ГБ пакетов (лог сборки),
+        # поэтому порог Calamares 24 ГБ для неё завышен: диск «ровно
+        # 24 ГБ» проходит проверку впритык, а 20 ГБ блокируется зря.
+        # Снижаем только для mini; full/slim остаются на 24.0 в исходнике.
+        log "Профиль mini: порог диска Calamares 24 → 16 ГБ"
+        python3 - "$WORK/profile/airootfs/etc/calamares/modules/welcome.conf" <<'PYWELCOME'
+import sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+assert "requiredStorage: 24.0" in text, "в welcome.conf нет исходного порога 24.0"
+text = text.replace("requiredStorage: 24.0", "requiredStorage: 16.0", 1)
+open(path, "w", encoding="utf-8").write(text)
+PYWELCOME
         # Обрезка файлов пакетов для mini — NoExtract в pacman.conf:
         # локали кроме en/ru, документация, переводы Qt, тесты Python,
         # прошивки чужого железа, редкие шрифты. Файлы просто не

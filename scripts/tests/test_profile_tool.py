@@ -535,6 +535,19 @@ class AuditRegressionTest(unittest.TestCase):
         self.assertIn("def installer_available()", welcome)
         self.assertIn("Установить FlyArchOs на диск", welcome)
         self.assertIn('subprocess.Popen(["flyarchos-install"]', welcome)
+        # Окно помощника должно целиком доставаться на маленьком экране
+        # ВМ: прокрутка содержимого и сетка обоев в ширину окна.
+        self.assertIn("QScrollArea", welcome)
+        self.assertIn("index // 4", welcome)
+        # Пороги welcome: без шумной проверки screen; диск 24 ГБ в
+        # исходнике (full/slim), а mini сборка снижает до 16 при сборке —
+        # иначе компактный образ зря блокирует диски 16–23 ГБ.
+        welcome_conf = (self.AI / "etc" / "calamares" / "modules"
+                        / "welcome.conf").read_text(encoding="utf-8")
+        self.assertNotIn("- screen", welcome_conf)
+        self.assertIn("requiredStorage: 24.0", welcome_conf)
+        build_iso = (REPO / "scripts" / "build-iso.sh").read_text(encoding="utf-8")
+        self.assertIn("requiredStorage: 16.0", build_iso)
         # и вообще каждый модуль последовательности + GS-инвариант
         self.assertIn("module.desc", ci)
         self.assertIn("shown_choosers", ci)
