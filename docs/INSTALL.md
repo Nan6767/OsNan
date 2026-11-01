@@ -7,7 +7,7 @@
 
 ## 1. Загрузка с флешки
 
-1. Запишите ISO: `sudo dd if=flyarchos-1.8.0-beta-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
+1. Запишите ISO: `sudo dd if=flyarchos-1.9.0-beta-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
    (или Ventoy / balenaEtcher — поддерживается и UEFI, и BIOS).
 2. Загрузитесь с флешки. Live-сессия сама войдёт в **Hyprland** под
    пользователем `fly` (пароль `flyarchos`, у root тот же пароль).
