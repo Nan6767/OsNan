@@ -16,7 +16,7 @@
   <a href="https://github.com/Nan6767/OsNan/actions/workflows/iso.yml">
     <img alt="Build ISO" src="https://github.com/Nan6767/OsNan/actions/workflows/iso.yml/badge.svg?branch=main">
   </a>
-  <img alt="Версия 1.7.0-beta" src="https://img.shields.io/badge/version-1.7.0--beta-f59e0b">
+  <img alt="Версия 1.8.0-beta" src="https://img.shields.io/badge/version-1.8.0--beta-f59e0b">
   <img alt="Архитектура x86_64" src="https://img.shields.io/badge/arch-x86__64-1793d1">
 </p>
 
@@ -29,9 +29,10 @@
 </p>
 
 > [!IMPORTANT]
-> Сейчас доступна **бета-версия FlyArchOs 1.7.0-beta**. Для знакомства
-> скачивайте **Mini №58** — это **один целый ISO-файл**, его не нужно
-> распаковывать или склеивать из частей.
+> Сейчас доступна **бета-версия FlyArchOs 1.8.0-beta**. Для знакомства
+> скачивайте **Mini №59** — это **один целый ISO-файл**, его не нужно
+> распаковывать или склеивать из частей. В live-системе установка теперь
+> запускается кнопкой **«Установить FlyArchOs на диск»**, без терминала.
 >
 > Автоматические проверки подтвердили, что установщик Calamares находится
 > внутри образа, но полный ручной сценарий «загрузка → установка → первый вход»
@@ -42,25 +43,25 @@
 
 ## Скачать один ISO
 
-### 👉 [Скачать FlyArchOs Mini №58 — один ISO-файл](https://github.com/Nan6767/OsNan/releases/download/iso-58-mini/flyarchos-1.7.0-beta-x86_64.iso)
+### 👉 [Скачать FlyArchOs 1.8.0-beta Mini №59 — один ISO-файл](https://github.com/Nan6767/OsNan/releases/download/iso-59-mini/flyarchos-1.8.0-beta-x86_64.iso)
 
 Это основной вариант для большинства пользователей:
 
-- **1 файл:** `flyarchos-1.7.0-beta-x86_64.iso`
-- **размер:** 1 911 767 040 байт — примерно **1,78 ГиБ**
+- **1 файл:** `flyarchos-1.8.0-beta-x86_64.iso`
+- **размер:** 1 913 618 432 байта — примерно **1,91 ГБ**
 - внутри: Hyprland, KDE Plasma, Firefox и установщик Calamares
 - установка работает **без интернета**
 - архитектура: **x86_64**
 
 Страница этого релиза:
-<https://github.com/Nan6767/OsNan/releases/tag/iso-58-mini>
+<https://github.com/Nan6767/OsNan/releases/tag/iso-59-mini>
 
 ### Какой образ выбрать
 
 | Образ | Что скачивать | Кому подходит |
 |---|---|---|
-| **Mini №58 — рекомендуется** | **один ISO** | Посмотреть систему, запустить в VirtualBox, выполнить обычную установку |
-| [Full №57](https://github.com/Nan6767/OsNan/releases/tag/iso-57-full) | ZIP с ISO или части `.part00`–`.part05` | Нужны сразу дополнительные наборы программ, пресеты установщика и второе ядро |
+| **Mini №59 (1.8.0-beta) — рекомендуется** | **один ISO** | Посмотреть систему, запустить в VirtualBox, выполнить обычную установку |
+| [Full №57 (1.7.0-beta)](https://github.com/Nan6767/OsNan/releases/tag/iso-57-full) | ZIP с ISO или части `.part00`–`.part05` | Старый полный вариант: нужны сразу дополнительные наборы программ, пресеты установщика и второе ядро |
 
 Full №57 можно скачать
 [одним ZIP-файлом](https://nightly.link/Nan6767/OsNan/actions/runs/40792766889/flyarchos-full-iso-57.zip):
@@ -73,18 +74,19 @@ Full №57 можно скачать
 
 > [!WARNING]
 > На странице Releases осталась долгая история разработки. Для новой загрузки
-> используйте только **Mini №58** или **Full №57**. Не скачивайте сборки
-> №49–№55 и старый релиз 1.0.0 — они помечены предупреждениями и не подходят
-> для установки. Mini №56 — предыдущий кандидат с проверенным CI составом,
-> но для нового скачивания он заменён сборкой №58.
+> используйте **Mini №59**. Full №57 — предыдущий полный вариант 1.7.0-beta;
+> в нём для запуска Calamares в VirtualBox может понадобиться ручной обход из
+> документации. Не скачивайте Mini №58, сборки №49–№55 и старый релиз 1.0.0:
+> №58 заменена сборкой №59, а остальные помечены предупреждениями и не
+> подходят для установки.
 
 <details>
 <summary><strong>Контрольные суммы SHA-256</strong></summary>
 
-Mini №58:
+Mini №59 (1.8.0-beta):
 
 ```text
-e1ed46fad5443bb1c6e5ce71943af2c568fe59e3432f82579b750b012797ae07
+48fb7e8ad9347fd78ce53ec3fc9a3f8240ca80776b90e2ae1c8b0c9d9183e5fa
 ```
 
 Full №57:
@@ -96,14 +98,17 @@ b64c3b13e9648465a510704a44c6d568c3ba1568be890418f1a8255be4347be7
 Проверка в Windows PowerShell:
 
 ```powershell
-Get-FileHash .\flyarchos-1.7.0-beta-x86_64.iso -Algorithm SHA256
+Get-FileHash .\flyarchos-1.8.0-beta-x86_64.iso -Algorithm SHA256
 ```
 
 Проверка в Linux:
 
 ```bash
-sha256sum flyarchos-1.7.0-beta-x86_64.iso
+sha256sum flyarchos-1.8.0-beta-x86_64.iso
 ```
+
+Команды выше показаны для Mini №59. Для Full №57 замените имя файла на
+`flyarchos-1.7.0-beta-x86_64.iso`.
 
 </details>
 
@@ -116,19 +121,19 @@ flowchart LR
     A["1. Скачать Mini ISO"] --> B["2. Создать виртуальную машину"]
     B --> C["3. Подключить ISO как DVD"]
     C --> D["4. Запустить live-систему"]
-    D --> E["5. Открыть Install FlyArchOs"]
+    D --> E["5. Нажать «Установить FlyArchOs на диск»"]
     E --> F["6. Убрать ISO после установки"]
     F --> G["7. Загрузиться с виртуального диска"]
 ```
 
-### Шаг 1. Скачайте Mini №58
+### Шаг 1. Скачайте Mini №59
 
 Воспользуйтесь
 [прямой ссылкой на один ISO](#скачать-один-iso).
 Файл должен называться:
 
 ```text
-flyarchos-1.7.0-beta-x86_64.iso
+flyarchos-1.8.0-beta-x86_64.iso
 ```
 
 Не подключайте к VirtualBox ZIP-архив или файл `.part00`: нужен именно готовый
@@ -141,7 +146,7 @@ flyarchos-1.7.0-beta-x86_64.iso
 | Поле | Что выбрать |
 |---|---|
 | Имя | `FlyArchOs` |
-| ISO Image | скачанный `flyarchos-1.7.0-beta-x86_64.iso` |
+| ISO Image | скачанный `flyarchos-1.8.0-beta-x86_64.iso` |
 | Type | `Linux` |
 | Version | `Arch Linux (64-bit)` |
 | Skip Unattended Installation | **включить** |
@@ -205,15 +210,13 @@ Live-сессия предназначена только для знакомс�
 
 ### Шаг 5. Установите систему на виртуальный диск
 
-1. Нажмите `Super+D`.
-2. Введите `Install`.
-3. Запустите **Install FlyArchOs**.
+1. В приветственном окне нажмите большую кнопку
+   **«Установить FlyArchOs на диск»**.
+2. Если окно уже закрыто, нажмите `Super+D`, введите `Install` и запустите
+   **Install FlyArchOs**.
 
-Если ярлык не нашёлся, откройте терминал и выполните:
-
-```bash
-flyarchos-install
-```
+Терминал для запуска установщика в Mini №59 не нужен. Если ярлык по какой-то
+причине не нашёлся, запасная команда — `flyarchos-install`.
 
 Для первой установки выбирайте простой вариант:
 
@@ -338,8 +341,8 @@ flyarchos-wallpaper-gen --theme aurora --seed 3 -o ~/pic.jpg
 
 ## Статус проекта
 
-- Текущая рекомендуемая загрузка: **FlyArchOs 1.7.0-beta Mini №58**.
-- Полный вариант: **FlyArchOs 1.7.0-beta Full №57**.
+- Текущая рекомендуемая загрузка: **FlyArchOs 1.8.0-beta Mini №59**.
+- Предыдущий полный вариант: **FlyArchOs 1.7.0-beta Full №57**.
 - CI проверяет содержимое ISO, наличие Calamares, модуля `packagechooser`,
   live-пользователя и ключевые файлы live-образа.
 - Полный графический тест в VirtualBox ещё должен быть пройден вручную:
@@ -348,8 +351,8 @@ flyarchos-wallpaper-gen --theme aurora --seed 3 -o ~/pic.jpg
   **1.0.0**; версии 1.1.0+ относятся к бета-каналу. Конкретный старый релиз
   1.0.0 сейчас помечен **«⛔ НЕ загружается»** — не используйте его.
 
-Лог автоматической сборки Mini №58:
-[logs/iso-run-58.log](logs/iso-run-58.log).
+Лог автоматической сборки Mini №59:
+[logs/iso-run-59.log](logs/iso-run-59.log).
 
 ---
 
