@@ -216,6 +216,17 @@ sfs_grep /usr/lib/flyarchos/flyarchos-install '^    exec calamares$' || fail_iso
 sfs_grep /usr/lib/flyarchos/flyarchos-install 'export LIBGL_ALWAYS_SOFTWARE=1' || fail_iso "flyarchos-install без software-GL обхода vmwgfx для ВМ"
 sfs_grep /usr/lib/flyarchos/flyarchos-install 'export QT_QPA_PLATFORM=wayland' || fail_iso "flyarchos-install не форсит native Wayland для root-Qt"
 sfs_grep /usr/lib/flyarchos/welcome-gui.py 'Установить FlyArchOs на диск' || fail_iso "live-помощник без кнопки установки в один клик"
+# Пороги welcome: mini (установленная система ~5,5 ГБ) собрана со
+# сниженным порогом диска, остальные профили — с исходным; шумной
+# проверки screen (жёлтое предупреждение на окне ВМ) быть не должно.
+if [ "$PROFILE_NAME" = "mini" ]; then
+    sfs_grep /etc/calamares/modules/welcome.conf 'requiredStorage: 16.0' || fail_iso "mini без сниженного порога диска (16 ГБ)"
+else
+    sfs_grep /etc/calamares/modules/welcome.conf 'requiredStorage: 24.0' || fail_iso "welcome.conf без порога диска (24 ГБ)"
+fi
+if sfs_grep /etc/calamares/modules/welcome.conf '^[[:space:]]*- screen'; then
+    fail_iso "в welcome.conf осталась шумная проверка screen"
+fi
 
 # Hyprland 0.57+ читает только Lua-конфиг. Legacy hyprland.conf в домашнем
 # каталоге означает молча потерянные автозапуск, панель, обои и бинды.
