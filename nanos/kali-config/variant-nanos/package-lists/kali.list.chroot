@@ -25,7 +25,8 @@ xdg-desktop-portal-gtk
 
 # Live usability, network, sound, and VirtualBox guest integration.
 network-manager
-network-manager-gnome
+network-manager-applet
+nm-connection-editor
 dbus-user-session
 zsh
 pipewire

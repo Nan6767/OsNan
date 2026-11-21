@@ -52,7 +52,8 @@ def main() -> int:
     required = {
         "kali-linux-core", "kali-desktop-live", "kali-archive-keyring", "hyprland",
         "xwayland", "waybar", "wofi", "foot", "mako-notifier", "swaybg",
-        "xdg-desktop-portal-hyprland", "network-manager", "virtualbox-guest-utils", "zsh",
+        "xdg-desktop-portal-hyprland", "network-manager", "network-manager-applet",
+        "nm-connection-editor", "virtualbox-guest-utils", "zsh",
     }
     missing = sorted(required - packages)
     check("minimal base + Hyprland + VirtualBox packages", not missing, ", ".join(missing))
