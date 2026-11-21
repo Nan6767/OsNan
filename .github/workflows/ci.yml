@@ -6,27 +6,25 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
-    name: Проверка дерева (check + test)
+    name: Validate NanOs live-build inputs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Зависимости для проверок
-        run: python -m pip install --upgrade pip pyyaml
+      - name: Static configuration checks
+        run: python scripts/check-nanos-config.py
 
-      - name: packages.x86_64 актуален
-        run: |
-          python scripts/gen-packages.py
-          python scripts/gen-packages.py --check
+      - name: Shell syntax
+        run: bash -n scripts/build-kali-iso.sh
 
-      - name: make check
-        run: python scripts/check.py
-
-      - name: make test
-        run: python -m unittest discover -s scripts/tests -v
+      - name: Whitespace and patch checks
+        run: git diff --check

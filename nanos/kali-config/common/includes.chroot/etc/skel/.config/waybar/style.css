@@ -1,0 +1,26 @@
+* {
+  font-family: "Noto Sans", "DejaVu Sans", sans-serif;
+  font-size: 13px;
+  color: #e5edf7;
+}
+
+window#waybar {
+  background: rgba(17, 24, 39, 0.94);
+  border: 1px solid rgba(98, 182, 203, 0.55);
+  border-radius: 8px;
+}
+
+#workspaces button {
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+
+#workspaces button.active {
+  background: rgba(98, 182, 203, 0.25);
+}
+
+#clock {
+  padding: 0 12px;
+}

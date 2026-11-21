@@ -1,0 +1,15 @@
+NAME="NanOs"
+PRETTY_NAME="NanOs 0.0.1-alpha"
+ID=kali
+ID_LIKE=debian
+VARIANT="NanOs live"
+VARIANT_ID=nanos
+VERSION="0.0.1-alpha (Kali Linux Rolling)"
+VERSION_ID="0.0.1-alpha"
+VERSION_CODENAME=rolling
+BUILD_ID=rolling
+HOME_URL="https://github.com/Nan6767/OsNan"
+DOCUMENTATION_URL="https://github.com/Nan6767/OsNan/tree/main/docs"
+SUPPORT_URL="https://github.com/Nan6767/OsNan/issues"
+BUG_REPORT_URL="https://github.com/Nan6767/OsNan/issues"
+ANSI_COLOR="1;36"

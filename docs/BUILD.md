@@ -1,220 +1,28 @@
-# Сборка ISO FlyArchOs
+# Сборка NanOs ISO
 
-> **Важно про Calamares.** Графический установщик FlyArchOs — Calamares — **отсутствует
-> в официальных репозиториях Arch** (только AUR). Поэтому перед сборкой ISO его нужно
-> собрать в локальный репозиторий:
->
-> ```bash
-> ./scripts/build-aur.sh --with calamares    # или: make aur
-> ./scripts/build-iso.sh                     # Calamares подхватится автоматически
-> ```
->
-> `build-aur.sh` под root сам создаёт пользователя `builder` (makepkg запрещён под root)
-> и выдаёт ему `sudo`. Если AUR-пакет не собран, ISO всё равно соберётся — но уже без
-> графического установщика (об этом будет предупреждение).
+NanOs основана на Kali Linux Rolling и собирается официальной инфраструктурой Kali `kali-live`/`live-build`. Сам ISO в песочнице не собирается: сборка запускается GitHub Actions в Kali Rolling container.
 
+## Запуск
 
-## 0. Что понадобится
+- Автоматически: изменение `BUILD_ISO.txt` запускает workflow **Build NanOs ISO**.
+- Вручную: GitHub → Actions → **Build NanOs ISO** → Run workflow.
 
-| | |
-|---|---|
-| ОС | Arch Linux (или контейнер `archlinux:latest`) — `mkarchiso` работает через pacman |
-| Пакеты | `archiso git python python-yaml` (Python/YAML нужны только для проверок) |
-| Место | 40+ ГБ: рабочий каталог ~15 ГБ, кэш пакетов ~10 ГБ, ISO ~10-14 ГБ |
-| Права | root (или sudo) — mkarchiso монтирует и делает chroot |
-| Время | 40-90 минут в зависимости от зеркала и диска |
+После успеха ISO, SHA-256, manifest и build log доступны в артефакте запуска Actions. Первые кандидаты не публикуются в постоянный релиз до прохождения проверки в VirtualBox.
 
-> «Жирный» образ: внутри лежит **всё** (оба окружения + все наборы ПО),
-> поэтому установка проходит без интернета. Размер ISO ~10-14 ГБ.
+## Что делает workflow
 
-## 1. Быстрый путь
+1. Запускает `kalilinux/kali-rolling` как привилегированный контейнер (это нужно live-build для chroot/mount).
+2. Устанавливает `git`, `live-build` и `cdebootstrap`.
+3. `scripts/build-kali-iso.sh` клонирует официальный `kali-live`, добавляет `nanos/kali-config/` в `variant-nanos` и вызывает `build.sh --distribution kali-rolling --variant nanos --arch amd64`.
+4. Сохраняет commit `kali-live`, версию Hyprland из собранного chroot (если live-build сохраняет dpkg database), имя образа `nanos-0.0.1-alpha-amd64.iso` и SHA-256.
+
+Версии Kali Rolling и Hyprland меняются. В образе лежат конфиги Hyprland 0.56-style (`hyprland.conf`) и 0.57+ (`hyprland.lua`), но это не заменяет реальный запуск: build log и manifest фиксируют данные кандидата, а совместимость подтверждается только VirtualBox-тестом.
+
+## Локальные проверки без сборки ISO
 
 ```bash
-git clone https://github.com/Nan6767/OsNan.git
-cd OsNan
-
-make check      # проверка дерева (можно и без Arch)
-make test       # 22 модульных теста логики установщика
-
-sudo ./scripts/build-iso.sh
+python3 scripts/check-nanos-config.py
+bash -n scripts/build-kali-iso.sh
 ```
 
-Результат:
-
-```
-out/flyarchos-2026XX.iso
-out/flyarchos-2026XX.iso.sha256
-```
-
-## 2. Что делает `build-iso.sh`
-
-1. `scripts/gen-packages.py` — собирает `profile/packages.x86_64` из `groups/*.txt`.
-2. Копирует профиль в `work/profile` (исходники не портятся).
-3. Кладёт `groups/*.txt` внутрь образа — `/usr/share/flyarchos/groups/`:
-   установщик читает их, чтобы удалить невыбранные наборы ПО.
-4. Готовит `pacman.conf` из `pacman.conf.in`: включает multilib и, если собран
-   локальный репозиторий, добавляет секцию `[flyarchos]`.
-5. Добавляет файлы загрузчика из `/usr/share/archiso/configs/releng`
-   (`efiboot/`, `syslinux/`, `grub/`, `isolinux/`) и подхватывает оттуда же
-   поддерживаемые `bootmodes` — профиль не ломается на другой версии archiso.
-6. Запускает `scripts/check.py`.
-7. Запускает `mkarchiso -v -w work -o out work/profile`.
-
-Флаги:
-
-```bash
-./scripts/build-iso.sh --aur     # сначала собрать AUR-пакеты в локальный репозиторий
-./scripts/build-iso.sh --clean   # очистить work/ перед сборкой
-./scripts/build-iso.sh --check   # только проверить окружение
-./scripts/build-iso.sh -q        # меньше вывода
-```
-
-## 3. AUR-пакеты (по желанию)
-
-Пакеты, которых нет в репозиториях Arch (Chrome, Spotify, Proton-GE, темы…),
-перечислены в `groups/aur.txt`. Чтобы они попали внутрь ISO:
-
-```bash
-make aur                    # = ./scripts/build-aur.sh
-sudo ./scripts/build-iso.sh --aur
-```
-
-`build-aur.sh` клонирует PKGBUILD из AUR и собирает пакеты:
-
-* в чистом chroot, если установлен `devtools` (`extra-x86_64-build`);
-* иначе обычным `makepkg -s` в текущей системе.
-
-Готовые пакеты и база `flyarchos.db.tar.gz` складываются в `repo/x86_64/`,
-оттуда их забирает pacman при сборке образа. Если репозитория нет — список
-`aur.txt` просто игнорируется, ISO соберётся и без него.
-
-## 4. Сборка в Docker (если Arch нет)
-
-```bash
-docker build -t flyarchos-builder docker/
-docker run --rm -it --privileged \
-    -v "$PWD/out:/flyarchos/out" \
-    -v "$PWD/repo:/flyarchos/repo" \
-    flyarchos-builder
-```
-
-`--privileged` обязателен: mkarchiso работает с loop-устройствами и chroot.
-Ключи pacman в контейнере обновляются автоматически при сборке образа.
-
-То же самое одной командой без сборки своего образа:
-
-```bash
-docker run --rm -it --privileged -v "$PWD:/flyarchos" -w /flyarchos \
-    archlinux:latest ./scripts/ci-build.sh slim   # или full
-```
-
-## 4b. Сборка в GitHub Actions (облако)
-
-Если нет ни Arch, ни Docker — образ собирается в облаке. Запуск — пушем
-файла `BUILD_ISO.txt` (в нём же задаётся профиль строкой `profile=slim`
-или `profile=full`):
-
-```bash
-echo "# пересборка $(date -u +%FT%TZ)" >> BUILD_ISO.txt
-git commit -am "Сборка ISO" && git push
-gh run watch            # следить за сборкой
-```
-
-или через веб-интерфейс: **Actions → Build ISO → Run workflow** (там же
-выбирается профиль).
-
-* `mini` — компактный образ < 2 ГБ: оба окружения и Firefox, без второго
-  ядра, компиляторов и тяжёлых шрифтов. Единственный вариант, который
-  GitHub принимает в релиз **цельным файлом** (лимит — 2 GiB на файл);
-* `slim` — оба окружения без дополнительных наборов: ISO 3,7 ГБ, ~13 мин;
-* `full` — «жирный» образ со всеми наборами ПО: ISO 7,6 ГБ, ~30 мин;
-
-Результат попадает в два места:
-
-1. **Релиз GitHub** (`iso-<номер>-<профиль>`) — постоянная ссылка для
-   скачивания. Образ больше 2 ГБ автоматически режется на части по 1500 МБ,
-   рядом лежит `JOIN-README.txt` с инструкцией, как собрать ISO обратно:
-   `cat flyarchos-1.0.0-x86_64.iso.part* > flyarchos-1.0.0-x86_64.iso`
-2. **Артефакт запуска** (`flyarchos-full-iso-<номер>`) — целый ISO одним
-   файлом, хранится 90 дней: `gh run download <id>` или кнопка на странице
-   запуска.
-
-Workflow освобождает место на раннере (удаляет android/dotnet/ghc), запускает
-`scripts/ci-build.sh` в привилегированном контейнере `archlinux:latest`,
-складывает лог сборки в `logs/iso-run-<номер>.log` и дублирует ошибки в
-аннотации запуска (логи Actions извне скачивать нельзя — сеть ограничена).
-
-## 5. Обновление состава системы
-
-Все пакеты описаны в `groups/`:
-
-```bash
-$EDITOR groups/50-dev.txt      # добавили пакет
-make packages                  # пересобрать profile/packages.x86_64
-make check                     # убедиться, что ничего не сломалось
-```
-
-Как это работает:
-
-* `groups/*.txt` → `profile/packages.x86_64` (что ставить в образ);
-* те же файлы попадают в ISO как `/usr/share/flyarchos/groups/` (что удалять
-  при установке, если группу не выбрали);
-* `id` вариантов в `packagechooser_*.conf` должны совпадать с именами файлов
-  групп — это проверяет `make check`.
-
-Обои:
-
-```bash
-$EDITOR scripts/pack-wallpapers.py    # каталог CATALOG (id, название, источник)
-make wallpapers                       # пересобрать обои, Plasma-пакеты, манифест
-make branding                         # логотип, баннер, слайды установщика
-```
-
-## 6. Частые проблемы
-
-**`mkarchiso: package not found`** — пакет переименован или есть только в AUR.
-Проверьте имя: `pacman -Ss <name>`. Уберите строку из `groups/` или перенесите
-её в `groups/aur.txt`.
-
-**`signature from ... is unknown trust` / keyring** — обновите ключи на хосте:
-
-```bash
-sudo pacman -Sy archlinux-keyring && sudo pacman-key --populate archlinux
-```
-
-**ISO грузится, но установщик не находит squashfs** — проверьте, что
-`unpackfs.conf` указывает на `/run/archiso/bootmnt/arch/x86_64/airootfs.sfs`
-(именно там он лежит в archiso; при `copytoram` путь другой — поправьте
-`modules/unpackfs.conf`).
-
-**Установка падает на этапе `shellprocess@profile`** — это шаг удаления
-пакетов. Он не считается фатальным (логи в `/var/log/flyarchos/profile.log`
-уже внутри установленной системы), но если мешает — запустите
-`flyarchos-profile --apply --desktop=... --extras=...` вручную после перезагрузки.
-
-**Не тот загрузчик/не грузится после установки** — `install-finalize.sh`
-проверяет наличие `/boot/grub/grub.cfg` и ставит GRUB, если загрузчика нет.
-Логи: `/var/log/flyarchos-install.log`.
-
-**Мало места на диске** — сократите наборы: уберите из `groups/` blender,
-krita, kdenlive, libreoffice, virtualbox, qemu-full, nvidia — это самые тяжёлые
-пакеты.
-
-## 7. Проверки перед сборкой
-
-```bash
-make check
-```
-
-Проверяется: синтаксис Python и Bash, YAML Calamares, согласованность
-`settings.conf` с модулями и экземплярами, существование скриптов, которые
-запускает установщик, совпадение id в `packagechooser` с файлами групп,
-наличие обоев/манифеста/пакетов Plasma, конфигов в `/etc/skel`, ярлыков
-`.desktop`, брендинга и документации.
-
-```bash
-make test
-```
-
-22 модульных теста на логику `flyarchos-profile`: что удаляется, что остаётся,
-как обрабатываются пересечения групп и неизвестные значения.
+Эти проверки не заменяют GitHub Actions и не подтверждают загрузку ISO.

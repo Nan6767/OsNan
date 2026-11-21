@@ -1,0 +1,38 @@
+# Minimal Kali live base — do not add kali-linux-default/large/everything.
+kali-linux-core
+kali-desktop-live
+kali-defaults
+kali-menu
+kali-archive-keyring
+locales-all
+
+# The one and only desktop: Hyprland.
+hyprland
+xwayland
+
+# Lightweight Wayland session components.
+waybar
+wofi
+foot
+mako-notifier
+swaybg
+grim
+slurp
+wl-clipboard
+xdg-desktop-portal
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+
+# Live usability, network, sound, and VirtualBox guest integration.
+network-manager
+network-manager-gnome
+dbus-user-session
+zsh
+pipewire
+pipewire-pulse
+wireplumber
+virtualbox-guest-utils
+ca-certificates
+fonts-dejavu-core
+fonts-noto-core
+fonts-noto-color-emoji

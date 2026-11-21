@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+# Use the live tty session instead of a second desktop/display manager.
+systemctl set-default multi-user.target || true
+systemctl enable getty@tty1.service || true
+systemctl enable NetworkManager.service || true
+systemctl disable display-manager.service sddm.service lightdm.service gdm.service 2>/dev/null || true
+
+# Guest utilities are optional on physical hardware; enable only if installed.
+systemctl enable vboxservice.service 2>/dev/null || true
