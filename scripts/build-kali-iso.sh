@@ -43,7 +43,7 @@ cp -a "$REPO_ROOT/nanos/kali-config/common/." \
 log "Build Kali Rolling / amd64 / variant-nanos"
 cd "$KALI_LIVE_DIR"
 # tee is paired with pipefail so a failed live-build cannot look like success.
-./build.sh --distribution kali-rolling --variant nanos --arch amd64 --verbose \
+./build.sh --variant nanos --arch amd64 --verbose \
     2>&1 | tee -a "$OUT_DIR/kali-live.log"
 
 mapfile -d '' -t images < <(find "$KALI_LIVE_DIR/images" -maxdepth 1 -type f -name '*.iso' -print0 2>/dev/null)
