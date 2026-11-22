@@ -51,7 +51,7 @@ def main() -> int:
     check("Kali live package list exists", package_file.is_file())
     required = {
         "kali-linux-core", "kali-desktop-live", "kali-archive-keyring", "hyprland",
-        "xwayland", "waybar", "wofi", "foot", "mako-notifier", "swaybg",
+        "hyprland-qtutils", "xwayland", "waybar", "wofi", "foot", "mako-notifier", "swaybg",
         "xdg-desktop-portal-hyprland", "network-manager", "network-manager-applet",
         "nm-connection-editor", "virtualbox-guest-utils", "zsh",
     }
@@ -87,12 +87,16 @@ def main() -> int:
     zprofile_text = read(zprofile)
     bash_profile_text = read(bash_profile)
     getty_text = read(getty)
-    check("Bash login autostarts only on tty1", all(token in profile_text for token in (
-        '"/dev/tty1"', "dbus-run-session -- Hyprland", "        Hyprland",
-    )))
-    check("Zsh login also autostarts Hyprland on tty1", all(token in zprofile_text for token in (
-        "[[ -o interactive ]]", '"/dev/tty1"', "dbus-run-session -- Hyprland",
-    )))
+    bash_direct_launch = any(line.strip() in {"Hyprland", "dbus-run-session -- Hyprland"}
+                             for line in profile_text.splitlines())
+    zsh_direct_launch = any(line.strip() in {"Hyprland", "dbus-run-session -- Hyprland"}
+                            for line in zprofile_text.splitlines())
+    check("Bash login autostarts only on tty1 via start-hyprland", all(token in profile_text for token in (
+        '"/dev/tty1"', "command -v start-hyprland", "start-hyprland",
+    )) and not bash_direct_launch)
+    check("Zsh login autostarts only on tty1 via start-hyprland", all(token in zprofile_text for token in (
+        "[[ -o interactive ]]", '"/dev/tty1"', "command -v start-hyprland", "start-hyprland",
+    )) and not zsh_direct_launch)
     check("bash login sources live profile", '. "$HOME/.profile"' in bash_profile_text)
     check("tty1 autologin uses Kali live user", "--autologin kali" in getty_text and "agetty" in getty_text)
 
