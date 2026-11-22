@@ -46,8 +46,13 @@ cd "$KALI_LIVE_DIR"
 ./build.sh --variant nanos --arch amd64 \
     2>&1 | tee -a "$OUT_DIR/kali-live.log"
 
-mapfile -d '' -t images < <(find "$KALI_LIVE_DIR/images" -maxdepth 1 -type f -name '*.iso' -print0 2>/dev/null)
-[[ "${#images[@]}" -eq 1 ]] || die "Expected exactly one ISO in images/, found ${#images[@]}"
+mapfile -d '' -t images < <(
+    for image_dir in "$KALI_LIVE_DIR/output" "$KALI_LIVE_DIR/images"; do
+        [[ -d "$image_dir" ]] || continue
+        find "$image_dir" -maxdepth 1 -type f -name '*.iso' -print0
+    done
+)
+[[ "${#images[@]}" -eq 1 ]] || die "Expected exactly one ISO in output/ or images/, found ${#images[@]}"
 
 mkdir -p "$OUT_DIR"
 ISO="$OUT_DIR/nanos-$VERSION-amd64.iso"
