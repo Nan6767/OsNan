@@ -2,4 +2,4 @@
 # База: Kali Linux Rolling. Единственный desktop: Hyprland.
 # Первый тест: EFI + VirtualBox VMSVGA + 128 MiB + 3D ON.
 # Изменение этого файла запускает workflow Build NanOs ISO.
-trigger=nanos-0.0.1-alpha-live-r6
+trigger=nanos-0.0.1-alpha-live-r7

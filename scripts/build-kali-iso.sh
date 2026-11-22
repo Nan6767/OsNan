@@ -57,7 +57,10 @@ mapfile -d '' -t images < <(
 mkdir -p "$OUT_DIR"
 ISO="$OUT_DIR/nanos-$VERSION-amd64.iso"
 install -m 0644 "${images[0]}" "$ISO"
-sha256sum "$ISO" > "$ISO.sha256"
+(
+    cd "$OUT_DIR"
+    sha256sum "$(basename "$ISO")" > "$(basename "$ISO").sha256"
+)
 
 HYPRLAND_VERSION="not-recorded"
 DPKG_ADMIN="$KALI_LIVE_DIR/chroot/var/lib/dpkg"

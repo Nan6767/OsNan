@@ -46,7 +46,7 @@ jobs:
         if: success()
         run: |
           cat out/build-manifest.txt
-          sha256sum -c out/nanos-*.iso.sha256
+          (cd out && sha256sum -c nanos-*.iso.sha256)
           ls -lh out/nanos-*.iso out/nanos-*.iso.sha256
 
       - name: Upload NanOs ISO candidate
